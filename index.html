@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Budget"/>
+<meta name="theme-color" content="#0f0f0f"/>
+<title>Budget Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#0f0f0f;color:#f0ece4;font-family:'DM Mono',monospace;-webkit-font-smoothing:antialiased;}
+body{padding-bottom:80px;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:#c8f56e;border-radius:2px;}
+
+/* HEADER */
+#header{background:#0f0f0f;border-bottom:1px solid #1e1e1e;padding:env(safe-area-inset-top,16px) 16px 0;position:sticky;top:0;z-index:100;}
+.header-row{display:flex;align-items:center;margin-bottom:14px;}
+.logo-green{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#c8f56e;letter-spacing:-0.02em;}
+.logo-white{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#f0ece4;letter-spacing:-0.02em;margin-left:8px;}
+#saved-badge{font-size:11px;color:#c8f56e;margin-left:10px;opacity:0;transition:opacity .3s;}
+#saved-badge.show{opacity:1;}
+#export-btn{margin-left:auto;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:7px;padding:7px 14px;color:#c8f56e;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;letter-spacing:.04em;}
+#export-btn:active{opacity:.7;}
+
+/* TABS */
+#tabs{display:flex;}
+.tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;padding:10px 4px;font-family:'DM Mono',monospace;font-size:10px;color:#555;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;transition:color .2s;}
+.tab.active{color:#c8f56e;border-bottom-color:#c8f56e;}
+
+/* CONTENT */
+#content{max-width:620px;margin:0 auto;padding:18px 14px 0;}
+.section{display:flex;flex-direction:column;gap:14px;}
+
+/* CARDS */
+.card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:18px;}
+
+/* BALANCE CARD */
+#balance-card{text-align:center;padding:28px 18px;transition:background .3s,border-color .3s;}
+#balance-label{font-size:11px;color:#666;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;}
+#balance-amount{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;letter-spacing:-.03em;transition:color .3s;}
+#balance-sub{font-size:12px;color:#444;margin-top:6px;}
+
+/* SUMMARY GRID */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sum-card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px;}
+.sum-label{font-size:11px;color:#666;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.sum-amount{font-size:22px;font-weight:500;}
+.sum-count{font-size:11px;color:#444;margin-top:3px;}
+
+/* SPEND BAR */
+.spend-header{display:flex;justify-content:space-between;margin-bottom:10px;}
+.spend-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.08em;}
+#spend-pct{font-size:12px;}
+#spend-track{background:#111;border-radius:4px;height:8px;overflow:hidden;}
+#spend-fill{height:100%;border-radius:4px;transition:width .5s ease,background .3s;}
+#spend-remaining{font-size:11px;color:#444;margin-top:8px;}
+
+/* CATEGORY BARS */
+.cat-row{margin-bottom:10px;}
+.cat-row:last-child{margin-bottom:0;}
+.cat-hdr{display:flex;justify-content:space-between;margin-bottom:4px;}
+.cat-name{font-size:13px;}
+.cat-amt{font-size:13px;color:#ff6b6b;}
+.cat-track{background:#111;border-radius:3px;height:4px;}
+.cat-fill{height:100%;border-radius:3px;background:#ff6b6b;opacity:.7;}
+
+/* FORM */
+.type-toggle{display:flex;background:#111;border:1px solid #2a2a2a;border-radius:8px;overflow:hidden;}
+.type-btn{flex:1;padding:11px;border:none;background:none;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;transition:all .2s;color:#555;}
+.type-btn.income-active{background:#1a2e0a;color:#c8f56e;}
+.type-btn.expense-active{background:#2e0a0a;color:#ff6b6b;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:11px;color:#666;letter-spacing:.1em;text-transform:uppercase;}
+.field input,.field select{background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:11px 14px;color:#f0ece4;font-family:'DM Mono',monospace;font-size:14px;transition:border-color .2s;width:100%;}
+.field input:focus,.field select:focus{outline:none;border-color:#c8f56e;}
+.field select option{background:#1a1a1a;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.add-btn{background:#c8f56e;color:#0f0f0f;border:none;border-radius:8px;padding:13px 28px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;letter-spacing:.06em;transition:all .2s;width:100%;margin-top:4px;}
+.add-btn:active{transform:scale(.98);opacity:.9;}
+
+/* LISTS */
+.list-header{display:flex;align-items:center;justify-content:space-between;}
+.list-count{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.1em;}
+.list-total{font-size:20px;font-weight:500;}
+.entry-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #1e1e1e;}
+.entry-row:last-child{border-bottom:none;}
+.entry-info{flex:1;min-width:0;}
+.entry-lbl{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.entry-meta{font-size:11px;color:#444;margin-top:2px;}
+.entry-amt{font-size:14px;font-weight:500;flex-shrink:0;}
+.del-btn{background:none;border:none;cursor:pointer;color:#333;font-size:20px;padding:2px 6px;line-height:1;flex-shrink:0;}
+.del-btn:active{color:#ff6b6b;}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:#444;font-size:14px;line-height:2;}
+.empty-cta{margin-top:14px;background:none;border:1px solid #2a2a2a;color:#c8f56e;padding:9px 22px;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:13px;}
+
+/* EXPORT MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
+.modal{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:20px 20px 0 0;padding:24px 18px 44px;width:100%;max-width:500px;}
+.modal-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#f0ece4;}
+.modal-sub{font-size:12px;color:#555;margin-top:4px;}
+.modal-close{background:#111;border:1px solid #2a2a2a;color:#555;font-size:18px;cursor:pointer;border-radius:6px;padding:4px 10px;line-height:1;}
+.exp-btn{display:flex;align-items:center;gap:14px;width:100%;background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:15px 16px;cursor:pointer;transition:border-color .2s;color:#f0ece4;font-family:'DM Mono',monospace;text-align:left;margin-bottom:10px;}
+.exp-btn:last-child{margin-bottom:0;}
+.exp-btn:active{border-color:#555;}
+.exp-icon{font-size:26px;flex-shrink:0;}
+.exp-title{font-size:14px;color:#f0ece4;display:block;}
+.exp-sub{font-size:11px;color:#555;margin-top:3px;display:block;line-height:1.5;}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a2e0a;border:1px solid #2a4a10;color:#c8f56e;padding:11px 22px;border-radius:8px;font-size:12px;z-index:300;white-space:nowrap;animation:fadeUp .3s ease;max-width:88vw;text-align:center;}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-row">
+    <span class="logo-green">BUDGET</span>
+    <span class="logo-white">TRACKER</span>
+    <span id="saved-badge">✓ saved</span>
+    <button id="export-btn" onclick="openExportModal()">↗ Export</button>
+  </div>
+  <div id="tabs">
+    <button class="tab active" onclick="switchTab('dashboard',this)">📊 Overview</button>
+    <button class="tab" onclick="switchTab('add',this)">+ Add</button>
+    <button class="tab" onclick="switchTab('income',this)">↑ Income</button>
+    <button class="tab" onclick="switchTab('expenses',this)">↓ Expenses</button>
+  </div>
+</div>
+
+<div id="content"></div>
+
+<!-- EXPORT MODAL -->
+<div class="overlay" id="export-modal" style="display:none;" onclick="closeExportModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title">Export Report</div>
+        <div class="modal-sub" id="modal-sub">0 entries</div>
+      </div>
+      <button class="modal-close" onclick="closeExportModal()">×</button>
+    </div>
+    <button class="exp-btn" onclick="exportExcel()">
+      <span class="exp-icon">📊</span>
+      <div>
+        <span class="exp-title">Download Excel (.xlsx)</span>
+        <span class="exp-sub">3 sheets: Income, Expenses & Summary. Opens in Excel, Numbers or Google Sheets.</span>
+      </div>
+    </button>
+    <button class="exp-btn" onclick="exportCSV()">
+      <span class="exp-icon">📄</span>
+      <div>
+        <span class="exp-title">Download CSV</span>
+        <span class="exp-sub">All data in one file. Import into any spreadsheet app.</span>
+      </div>
+    </button>
+    <button class="exp-btn" onclick="openGoogleSheets()">
+      <span class="exp-icon">🟢</span>
+      <div>
+        <span class="exp-title">Open in Google Sheets</span>
+        <span class="exp-sub">Downloads your CSV then opens a new Google Sheet. Use File → Import to load it.</span>
+      </div>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────
+const INCOME_CATS  = ["Salary","Freelance","Bonus","Other Income"];
+const EXPENSE_CATS = ["Rent","Food","Transport","Utilities","Shopping","Health","Entertainment","Other"];
+
+let data = {income:[], expenses:[]};
+let currentTab = "dashboard";
+let formType = "income";
+
+try { const s = localStorage.getItem("budget-data"); if(s) data = JSON.parse(s); } catch(e){}
+
+function save(){
+  try { localStorage.setItem("budget-data", JSON.stringify(data)); } catch(e){}
+  const b = document.getElementById("saved-badge");
+  b.classList.add("show");
+  setTimeout(()=>b.classList.remove("show"), 1600);
+}
+
+// ── FORMAT ────────────────────────────────────────────────────────
+function fmt(n){ return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n||0); }
+
+// ── TABS ──────────────────────────────────────────────────────────
+function switchTab(tab, btn){
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  render();
+}
+
+// ── TOTALS ────────────────────────────────────────────────────────
+function totIncome(){ return data.income.reduce((s,i)=>s+i.amount,0); }
+function totExpenses(){ return data.expenses.reduce((s,i)=>s+i.amount,0); }
+
+// ── RENDER ────────────────────────────────────────────────────────
+function render(){
+  const ti = totIncome(), te = totExpenses(), bal = ti - te;
+  const c = document.getElementById("content");
+
+  if(currentTab === "dashboard") c.innerHTML = renderDashboard(ti,te,bal);
+  else if(currentTab === "add")  c.innerHTML = renderAdd();
+  else if(currentTab === "income")   c.innerHTML = renderList("income", ti);
+  else if(currentTab === "expenses") c.innerHTML = renderList("expenses", te);
+
+  // restore form state after re-render
+  if(currentTab === "add") restoreForm();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+function renderDashboard(ti, te, bal){
+  const isGreen = bal >= 0;
+  const spendPct = ti > 0 ? Math.min(100, Math.round((te/ti)*100)) : 0;
+  const barColor = te/ti > 0.9 ? "#ff6b6b" : "#c8f56e";
+
+  // category breakdown
+  const cats = EXPENSE_CATS.map(cat=>{
+    const total = data.expenses.filter(e=>e.category===cat).reduce((s,e)=>s+e.amount,0);
+    return {cat, total};
+  }).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
+  const maxCat = cats[0]?.total || 1;
+
+  return `<div class="section">
+    <div class="card" id="balance-card" style="background:${isGreen?"#111d0a":"#1d0a0a"};border-color:${isGreen?"#2a4a10":"#4a1010"};text-align:center;padding:28px 18px;">
+      <div id="balance-label">Current Balance</div>
+      <div id="balance-amount" style="color:${isGreen?"#c8f56e":"#ff6b6b"}">${fmt(bal)}</div>
+      <div id="balance-sub">${isGreen?"You're in the green 🌿":"Spending exceeds income ⚠️"}</div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="sum-card">
+        <div class="sum-label">Total Income</div>
+        <div class="sum-amount" style="color:#c8f56e">${fmt(ti)}</div>
+        <div class="sum-count">${data.income.length} entries</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">Total Expenses</div>
+        <div class="sum-amount" style="color:#ff6b6b">${fmt(te)}</div>
+        <div class="sum-count">${data.expenses.length} entries</div>
+      </div>
+    </div>
+
+    ${ti > 0 ? `<div class="card">
+      <div class="spend-header">
+        <span class="spend-label">Spend Rate</span>
+        <span id="spend-pct" style="color:${barColor}">${spendPct}%</span>
+      </div>
+      <div id="spend-track"><div id="spend-fill" style="width:${spendPct}%;background:${barColor}"></div></div>
+      <div id="spend-remaining">${fmt(ti-te)} remaining</div>
+    </div>` : ""}
+
+    ${cats.length > 0 ? `<div class="card">
+      <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;">Expense Breakdown</div>
+      ${cats.map(({cat,total})=>`
+        <div class="cat-row">
+          <div class="cat-hdr"><span class="cat-name">${cat}</span><span class="cat-amt">${fmt(total)}</span></div>
+          <div class="cat-track"><div class="cat-fill" style="width:${Math.round((total/maxCat)*100)}%"></div></div>
+        </div>`).join("")}
+    </div>` : ""}
+
+    ${data.income.length===0 && data.expenses.length===0 ? `
+      <div class="empty">No entries yet.<br/>
+        <button class="empty-cta" onclick="switchTab('add', document.querySelectorAll('.tab')[1])">+ Add your first entry</button>
+      </div>` : ""}
+  </div>`;
+}
+
+// ── ADD FORM ──────────────────────────────────────────────────────
+function renderAdd(){
+  const cats = formType === "income" ? INCOME_CATS : EXPENSE_CATS;
+  return `<div class="card" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.1em;">New Entry</div>
+    <div>
+      <div style="font-size:11px;color:#666;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Type</div>
+      <div class="type-toggle">
+        <button class="type-btn ${formType==="income"?"income-active":""}" onclick="setFormType('income')">↑ Income</button>
+        <button class="type-btn ${formType==="expense"?"expense-active":""}" onclick="setFormType('expense')">↓ Expense</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <input id="f-label" type="text" placeholder="${formType==="income"?"e.g. Monthly salary":"e.g. Grocery run"}" autocomplete="off"/>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Amount ($)</label>
+        <input id="f-amount" type="number" min="0" step="0.01" placeholder="0.00" inputmode="decimal"/>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input id="f-date" type="date" value="${new Date().toISOString().slice(0,10)}"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="f-category">
+        ${cats.map(c=>`<option>${c}</option>`).join("")}
+      </select>
+    </div>
+    <button class="add-btn" onclick="addEntry()">Add ${formType==="income"?"Income":"Expense"}</button>
+  </div>`;
+}
+
+function restoreForm(){
+  const lbl = document.getElementById("f-label");
+  if(lbl) lbl.focus();
+}
+
+function setFormType(type){
+  formType = type;
+  render();
+}
+
+function addEntry(){
+  const label  = (document.getElementById("f-label")?.value||"").trim();
+  const amount = parseFloat(document.getElementById("f-amount")?.value||"");
+  const cat    = document.getElementById("f-category")?.value || (formType==="income"?INCOME_CATS[0]:EXPENSE_CATS[0]);
+  const date   = document.getElementById("f-date")?.value || new Date().toISOString().slice(0,10);
+
+  if(!label || !amount || amount<=0){
+    const inp = document.getElementById("f-label");
+    if(inp){ inp.style.borderColor="#ff6b6b"; setTimeout(()=>inp.style.borderColor="",1000); }
+    return;
+  }
+
+  const entry = {id:Date.now(), label, amount, category:cat, date};
+  if(formType==="income") data.income.unshift(entry);
+  else data.expenses.unshift(entry);
+  save();
+  render();
+}
+
+// ── LIST VIEW ─────────────────────────────────────────────────────
+function renderList(type, total){
+  const isIncome = type==="income";
+  const color = isIncome ? "#c8f56e" : "#ff6b6b";
+  const entries = data[type];
+  return `<div class="section">
+    <div class="list-header">
+      <div class="list-count">${entries.length} entries</div>
+      <div class="list-total" style="color:${color}">${fmt(total)}</div>
+    </div>
+    ${entries.length===0
+      ? `<div class="empty">No ${type} entries yet.</div>`
+      : `<div class="card">${entries.map(e=>`
+          <div class="entry-row">
+            <div class="entry-info">
+              <div class="entry-lbl">${e.label}</div>
+              <div class="entry-meta">${e.category} · ${e.date}</div>
+            </div>
+            <div class="entry-amt" style="color:${color}">${isIncome?"+":"−"}${fmt(e.amount)}</div>
+            <button class="del-btn" onclick="deleteEntry('${type}',${e.id})">×</button>
+          </div>`).join("")}
+        </div>`}
+  </div>`;
+}
+
+function deleteEntry(type, id){
+  data[type] = data[type].filter(e=>e.id!==id);
+  save();
+  render();
+}
+
+// ── EXPORT MODAL ──────────────────────────────────────────────────
+function openExportModal(){
+  const total = data.income.length + data.expenses.length;
+  document.getElementById("modal-sub").textContent = `${total} entries · ${new Date().toLocaleDateString()}`;
+  document.getElementById("export-modal").style.display = "flex";
+}
+function closeExportModal(){
+  document.getElementById("export-modal").style.display = "none";
+}
+
+// Excel
+function exportExcel(){
+  closeExportModal();
+  const wb = XLSX.utils.book_new();
+  const ti = totIncome(), te = totExpenses(), bal = ti - te;
+
+  // Income sheet
+  const incRows = [["Date","Description","Category","Amount (USD)"],
+    ...data.income.map(e=>[e.date,e.label,e.category,e.amount]),
+    [],["TOTAL","","",ti]];
+  const wsI = XLSX.utils.aoa_to_sheet(incRows);
+  wsI["!cols"]=[{wch:12},{wch:32},{wch:18},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsI,"Income");
+
+  // Expenses sheet
+  const expRows = [["Date","Description","Category","Amount (USD)"],
+    ...data.expenses.map(e=>[e.date,e.label,e.category,e.amount]),
+    [],["TOTAL","","",te]];
+  const wsE = XLSX.utils.aoa_to_sheet(expRows);
+  wsE["!cols"]=[{wch:12},{wch:32},{wch:18},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsE,"Expenses");
+
+  // Summary sheet
+  const catBreak = EXPENSE_CATS.map(cat=>{
+    const t = data.expenses.filter(e=>e.category===cat).reduce((s,e)=>s+e.amount,0);
+    return t>0 ? [cat, t, te>0?((t/te)*100).toFixed(1)+"%":"0%"] : null;
+  }).filter(Boolean);
+  const wsS = XLSX.utils.aoa_to_sheet([
+    ["Budget Summary"],
+    ["Generated", new Date().toLocaleDateString()],
+    [],
+    ["","Amount (USD)"],
+    ["Total Income", ti],
+    ["Total Expenses", te],
+    ["Balance", bal],
+    [],
+    ["Expense Breakdown by Category"],
+    ["Category","Amount (USD)","% of Expenses"],
+    ...catBreak
+  ]);
+  wsS["!cols"]=[{wch:28},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsS,"Summary");
+
+  XLSX.writeFile(wb, `budget-report-${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast("✓ Excel downloaded! Check your Files app.");
+}
+
+// CSV helper
+function buildCSV(){
+  const rows=[["Type","Date","Description","Category","Amount (USD)"],
+    ...data.income.map(e=>["Income",e.date,e.label,e.category,e.amount]),
+    ...data.expenses.map(e=>["Expense",e.date,e.label,e.category,e.amount])];
+  return rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function downloadCSV(){
+  const blob = new Blob([buildCSV()],{type:"text/csv"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url;
+  a.download = `budget-report-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportCSV(){
+  closeExportModal();
+  downloadCSV();
+  showToast("✓ CSV downloaded!");
+}
+
+function openGoogleSheets(){
+  closeExportModal();
+  downloadCSV();
+  setTimeout(()=>window.open("https://sheets.new","_blank"), 700);
+  showToast("✓ CSV saved — import it in the Google Sheet that opened!");
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg){
+  const old = document.querySelector(".toast");
+  if(old) old.remove();
+  clearTimeout(toastTimer);
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  toastTimer = setTimeout(()=>t.remove(), 4000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
