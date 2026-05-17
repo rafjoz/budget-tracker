@@ -7,6 +7,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="Spendie"/>
 <meta name="theme-color" content="#F8FAFC"/>
+<link rel="apple-touch-icon" href="icon.png"/>
+<link rel="icon" type="image/png" href="icon.png"/>
+<link rel="shortcut icon" href="icon.png"/>
+<meta name="apple-mobile-web-app-title" content="Spendie"/>
 <title>Spendie</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -233,7 +237,7 @@ body{padding-bottom:90px;overflow-x:hidden;}
 <div id="header">
   <div style="max-width:500px;margin:0 auto;padding:0 16px;">
     <div class="header-top">
-      <div class="app-name">Spendie</div>
+      <img src="logo.png" style="height:40px;"/>
       <div class="header-actions">
         <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark mode">🌙</button>
         <button class="icon-btn" onclick="openExport()" title="Export">📤</button>
@@ -734,7 +738,7 @@ function renderSettings(){
       </button>
     </div>
     <div style="text-align:center;margin-top:24px;color:var(--text3);font-size:12px;">
-      Spendie v2.0 · Made with ❤️
+      Spendie v2.0 · Made with ❤️ by Rafay
     </div>
     <div style="height:20px;"></div>
   </div>`;
