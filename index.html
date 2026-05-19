@@ -298,8 +298,8 @@ header {
 .icon-btn {
   width: 38px; height: 38px;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg2);
+  border: none;
+  background: none;
   font-size: 16px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -608,7 +608,9 @@ main {
 
   <!-- STEP 1: Welcome -->
   <div class="ob-step active" id="ob-step-1">
-    <div class="ob-logo">💰</div>
+    <div class="ob-logo" style="padding:0;overflow:hidden;">
+  <img src="icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:24px;"/>
+</div>
     <h1 class="ob-title">Welcome to<br/><span style="background:linear-gradient(135deg,#7EE081,#31C6E3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Spendie</span></h1>
     <p class="ob-sub">Track income. Track expenses.<br/><span>Stay in control.</span></p>
     <button class="ob-btn-primary" onclick="goToStep(2)">Get Started 🚀</button>
@@ -683,7 +685,7 @@ main {
   <header>
     <div class="header-left">
       <!-- Inline SVG logo (wallet + gradient) -->
-      <svg class="header-logo" viewBox="0 0 120 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <img class="header-logo" src="logo.png" style="height:36px;object-fit:contain;"/>
         <defs>
           <linearGradient id="lg" x1="0" y1="0" x2="120" y2="36" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stop-color="#7EE081"/>
