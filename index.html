@@ -1,26 +1,38 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Spendie</title>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="Spendie"/>
-<meta name="theme-color" content="#F8FAFC"/>
-<link rel="apple-touch-icon" href="icon.png"/>
-<link rel="icon" type="image/png" href="icon.png"/>
-<link rel="shortcut icon" href="icon.png"/>
-<meta name="apple-mobile-web-app-title" content="Spendie"/>
-<title>Spendie</title>
+<meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
+/* ============================================================
+   SPENDIE v2.1
+   ============================================================ */
+
+/* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
+/* Set SHOW_UPDATE_BANNER = true in the JS section below       */
+/* to show a banner to all users when you push a new version.  */
+/* ─────────────────────────────────────────────────────────── */
+
 :root {
   --mint: #7EE081;
   --aqua: #31C6E3;
-  --grad: linear-gradient(135deg, #7EE081, #31C6E3);
-  --grad-soft: linear-gradient(135deg, rgba(126,224,129,.15), rgba(49,198,227,.15));
   --navy: #0B1B3A;
+  --green: #34D399;
+  --red: #FF6B6B;
+  --yellow: #FACC15;
+  --gradient: linear-gradient(135deg, #7EE081, #31C6E3);
+
   --bg: #F8FAFC;
   --bg2: #EEF2F7;
   --card: #FFFFFF;
@@ -28,16 +40,18 @@
   --text2: #64748B;
   --text3: #94A3B8;
   --border: #E2E8F0;
-  --red: #FF6B6B;
-  --green: #34D399;
-  --yellow: #FACC15;
+
+  --r-lg: 20px;
+  --r-sm: 12px;
+  --r-input: 14px;
+  --r-btn: 16px;
+  --r-pill: 30px;
   --shadow: 0 4px 24px rgba(11,27,58,.08);
   --shadow-sm: 0 2px 8px rgba(11,27,58,.06);
-  --radius: 20px;
-  --radius-sm: 12px;
-  --radius-xs: 8px;
+  --shadow-fab: 0 6px 20px rgba(49,198,227,.4);
 }
-[data-theme="dark"] {
+
+body.dark {
   --bg: #0F172A;
   --bg2: #1E293B;
   --card: #1E293B;
@@ -48,866 +62,1264 @@
   --shadow: 0 4px 24px rgba(0,0,0,.3);
   --shadow-sm: 0 2px 8px rgba(0,0,0,.2);
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background .3s,color .3s;-webkit-font-smoothing:antialiased;}
-body{padding-bottom:90px;overflow-x:hidden;}
 
-/* SCROLLBAR */
-::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-thumb{background:var(--grad);border-radius:2px;}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-/* HEADER */
-#header{background:var(--bg);padding:52px 20px 0;position:sticky;top:0;z-index:100;transition:background .3s;}
-.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-.app-name{font-family:'Poppins',sans-serif;font-size:26px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.header-actions{display:flex;gap:10px;align-items:center;}
-.icon-btn{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--bg2);color:var(--text);transition:all .2s;}
-.icon-btn:active{transform:scale(.92);}
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background .3s, color .3s;
+}
 
-/* BALANCE HERO */
-.balance-hero{background:var(--grad);border-radius:var(--radius);padding:24px 22px;margin:0 0 6px;position:relative;overflow:hidden;}
-.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:rgba(255,255,255,.1);border-radius:50%;}
-.balance-hero::after{content:'';position:absolute;bottom:-50px;left:20px;width:100px;height:100px;background:rgba(255,255,255,.07);border-radius:50%;}
-.balance-tag{font-size:11px;color:rgba(255,255,255,.75);letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:6px;}
-.balance-amount{font-family:'Poppins',sans-serif;font-size:40px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:4px;}
-.balance-tagline{font-size:12px;color:rgba(255,255,255,.7);}
-.balance-chips{display:flex;gap:10px;margin-top:16px;}
-.b-chip{background:rgba(255,255,255,.18);border-radius:30px;padding:6px 14px;display:flex;align-items:center;gap:6px;backdrop-filter:blur(4px);}
-.b-chip-icon{font-size:13px;}
-.b-chip-val{font-size:13px;font-weight:600;color:#fff;}
-.b-chip-lbl{font-size:10px;color:rgba(255,255,255,.7);}
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--mint); border-radius: 99px; }
 
-/* STATS ROW */
-.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
-.stat-card{background:var(--card);border-radius:var(--radius-sm);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--border);}
-.stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px;}
-.stat-label{font-size:11px;color:var(--text2);font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
-.stat-value{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--text);}
-.stat-count{font-size:11px;color:var(--text3);margin-top:2px;}
+/* ============================================================
+   ONBOARDING SCREEN
+   ============================================================ */
+#onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 32px 24px env(safe-area-inset-bottom, 24px);
+  transition: opacity .4s ease, transform .4s ease;
+}
 
-/* SECTION TITLES */
-.sec-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin:20px 0 12px;}
-.sec-row{display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px;}
-.sec-link{font-size:13px;color:var(--aqua);font-weight:600;background:none;border:none;cursor:pointer;}
+#onboarding.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.97);
+}
 
-/* SPEND BAR CARD */
-.spend-card{background:var(--card);border-radius:var(--radius-sm);padding:18px;box-shadow:var(--shadow-sm);border:1px solid var(--border);}
-.spend-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.spend-lbl{font-size:13px;color:var(--text2);font-weight:500;}
-.spend-pct-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;}
-.spend-track{background:var(--bg2);border-radius:6px;height:8px;overflow:hidden;}
-.spend-fill{height:100%;border-radius:6px;background:var(--grad);transition:width .6s ease;}
-.spend-fill.danger{background:linear-gradient(90deg,#FACC15,#FF6B6B);}
-.spend-sub{font-size:12px;color:var(--text3);margin-top:8px;}
+/* Step containers */
+.ob-step { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 380px; }
+.ob-step.active { display: flex; }
 
-/* CATEGORY BREAKDOWN */
-.cat-card{background:var(--card);border-radius:var(--radius-sm);padding:18px;box-shadow:var(--shadow-sm);border:1px solid var(--border);}
-.cat-item{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
-.cat-item:last-child{margin-bottom:0;}
-.cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.cat-item-name{font-size:13px;color:var(--text);font-weight:500;flex:1;}
-.cat-item-bar-wrap{flex:2;background:var(--bg2);border-radius:4px;height:6px;overflow:hidden;}
-.cat-item-bar{height:100%;border-radius:4px;opacity:.85;}
-.cat-item-amt{font-size:13px;font-weight:600;color:var(--text);flex-shrink:0;min-width:60px;text-align:right;}
+/* Logo area */
+.ob-logo {
+  width: 80px; height: 80px;
+  background: var(--gradient);
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 32px rgba(49,198,227,.35);
+  animation: logoFloat 3s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
 
-/* RECENT TRANSACTIONS */
-.txn-card{background:var(--card);border-radius:var(--radius-sm);padding:4px 0;box-shadow:var(--shadow-sm);border:1px solid var(--border);overflow:hidden;}
-.txn-row{display:flex;align-items:center;gap:12px;padding:13px 16px;transition:background .15s;}
-.txn-row:active{background:var(--bg2);}
-.txn-icon-wrap{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-.txn-info{flex:1;min-width:0;}
-.txn-label{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.txn-meta{font-size:11px;color:var(--text3);margin-top:2px;}
-.txn-amt{font-size:15px;font-weight:700;flex-shrink:0;}
-.txn-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px 6px;line-height:1;flex-shrink:0;transition:color .2s;}
-.txn-del:active{color:var(--red);}
-.txn-divider{height:1px;background:var(--border);margin:0 16px;}
+/* Greeting text */
+.ob-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+.ob-sub {
+  font-size: 15px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+.ob-sub span {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+}
 
-/* EMPTY STATE */
-.empty-state{text-align:center;padding:50px 30px;}
-.empty-emoji{font-size:56px;margin-bottom:16px;}
-.empty-title{font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
-.empty-sub{font-size:14px;color:var(--text2);line-height:1.6;}
-.empty-cta{margin-top:20px;background:var(--grad);color:#fff;border:none;border-radius:30px;padding:12px 28px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+/* Get Started button */
+.ob-btn-primary {
+  width: 100%;
+  padding: 16px;
+  background: var(--gradient);
+  border: none;
+  border-radius: var(--r-btn);
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-fab);
+  transition: transform .15s, box-shadow .15s;
+}
+.ob-btn-primary:active { transform: scale(.97); }
 
-/* STREAK CARD */
-.streak-card{background:var(--grad-soft);border:1.5px solid rgba(126,224,129,.3);border-radius:var(--radius-sm);padding:16px 18px;display:flex;align-items:center;gap:14px;}
-.streak-icon{font-size:32px;}
-.streak-title{font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
-.streak-sub{font-size:12px;color:var(--text2);margin-top:2px;}
-.streak-badge{margin-left:auto;background:var(--grad);color:#fff;border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;font-family:'Poppins',sans-serif;white-space:nowrap;}
+.ob-btn-secondary {
+  width: 100%;
+  padding: 15px;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-btn);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background .15s, border-color .15s;
+}
+.ob-btn-secondary:hover { border-color: var(--aqua); color: var(--aqua); }
 
-/* FAB */
-#fab{position:fixed;bottom:100px;right:20px;width:58px;height:58px;border-radius:50%;background:var(--grad);border:none;cursor:pointer;font-size:28px;color:#fff;box-shadow:0 6px 20px rgba(49,198,227,.4);display:flex;align-items:center;justify-content:center;z-index:90;transition:transform .2s,box-shadow .2s;}
-#fab:active{transform:scale(.93);box-shadow:0 3px 10px rgba(49,198,227,.3);}
+/* Step 2 — choice cards */
+.ob-choice-grid { display: flex; flex-direction: column; gap: 14px; width: 100%; margin-bottom: 8px; }
+.ob-choice-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s, transform .15s;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+}
+.ob-choice-card:hover { border-color: var(--aqua); box-shadow: 0 4px 20px rgba(49,198,227,.18); transform: translateY(-1px); }
+.ob-choice-card:active { transform: scale(.98); }
+.ob-choice-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.ob-choice-icon.green { background: rgba(126,224,129,.15); }
+.ob-choice-icon.blue  { background: rgba(49,198,227,.12); }
+.ob-choice-info h3 { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.ob-choice-info p  { font-size: 12px; color: var(--text2); }
 
-/* BOTTOM NAV */
-#bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;padding:8px 0 env(safe-area-inset-bottom,8px);z-index:100;box-shadow:0 -4px 20px rgba(0,0,0,.06);}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:6px 4px;transition:all .2s;}
-.nav-icon{font-size:20px;transition:transform .2s;}
-.nav-label{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.03em;transition:color .2s;}
-.nav-btn.active .nav-icon{transform:scale(1.15);}
-.nav-btn.active .nav-label{color:var(--aqua);font-weight:700;}
+/* Step 3 — name input */
+.ob-input-wrap { position: relative; width: 100%; margin-bottom: 20px; }
+.ob-input {
+  width: 100%;
+  padding: 16px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-input);
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.ob-input:focus { border-color: var(--aqua); box-shadow: 0 0 0 3px rgba(49,198,227,.12); }
+.ob-input::placeholder { color: var(--text3); }
 
-/* ADD SHEET (bottom sheet) */
-#add-sheet{position:fixed;inset:0;z-index:200;display:none;}
-#add-sheet.open{display:block;}
-.sheet-overlay{position:absolute;inset:0;background:rgba(11,27,58,.4);backdrop-filter:blur(2px);}
-.sheet-body{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:28px 28px 0 0;padding:12px 20px env(safe-area-inset-bottom,28px);max-height:92vh;overflow-y:auto;animation:slideUp .3s ease;}
-@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
-.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
-.sheet-title{font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:20px;text-align:center;}
+/* ── Import success ─ */
+.ob-import-note {
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  margin-top: 10px;
+}
+.ob-import-note a { color: var(--aqua); cursor: pointer; text-decoration: none; }
 
-/* TYPE TOGGLE */
-.type-toggle{display:flex;background:var(--bg2);border-radius:14px;padding:4px;margin-bottom:20px;}
-.type-btn{flex:1;padding:10px;border:none;background:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border-radius:10px;transition:all .25s;color:var(--text2);}
-.type-btn.income-active{background:#fff;color:var(--green);box-shadow:var(--shadow-sm);}
-.type-btn.expense-active{background:#fff;color:var(--red);box-shadow:var(--shadow-sm);}
-[data-theme="dark"] .type-btn.income-active,[data-theme="dark"] .type-btn.expense-active{background:var(--bg);}
+/* ============================================================
+   UPDATE BANNER
+   ============================================================ */
+#update-banner {
+  display: none; /* Shown via JS when SHOW_UPDATE_BANNER = true */
+  background: linear-gradient(135deg, rgba(126,224,129,.15), rgba(49,198,227,.12));
+  border-bottom: 1.5px solid rgba(49,198,227,.25);
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text);
+  align-items: center;
+  gap: 10px;
+}
+#update-banner.visible { display: flex; }
+.banner-icon { font-size: 18px; flex-shrink: 0; }
+.banner-text { flex: 1; line-height: 1.4; }
+.banner-text strong { color: var(--aqua); font-weight: 600; }
+.banner-btns { display: flex; gap: 8px; flex-shrink: 0; }
+.banner-btn {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform .15s;
+}
+.banner-btn:active { transform: scale(.96); }
+.banner-btn.primary { background: var(--gradient); color: #fff; }
+.banner-btn.ghost { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
 
-/* CATEGORY PICKER */
-.cat-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
-.cat-pick-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border:2px solid var(--border);border-radius:14px;background:var(--bg2);cursor:pointer;transition:all .2s;}
-.cat-pick-btn.selected{border-color:var(--aqua);background:rgba(49,198,227,.1);}
-.cat-pick-btn:active{transform:scale(.95);}
-.cat-pick-icon{font-size:22px;}
-.cat-pick-lbl{font-size:10px;color:var(--text2);font-weight:500;text-align:center;}
-.cat-pick-btn.selected .cat-pick-lbl{color:var(--aqua);font-weight:700;}
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+#app { display: flex; flex-direction: column; min-height: 100vh; }
 
-/* FORM FIELDS */
-.field{margin-bottom:16px;}
-.field label{display:block;font-size:12px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;}
-.field input,.field select{width:100%;background:var(--bg2);border:2px solid transparent;border-radius:14px;padding:14px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:16px;font-weight:500;transition:border-color .2s;-webkit-appearance:none;}
-.field input:focus,.field select:focus{outline:none;border-color:var(--aqua);}
-.field input::placeholder{color:var(--text3);}
-.amount-wrap{position:relative;}
-.amount-wrap .currency{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:18px;font-weight:700;color:var(--text2);}
-.amount-wrap input{padding-left:34px;font-size:24px;font-family:'Poppins',sans-serif;font-weight:700;}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.submit-btn{width:100%;background:var(--grad);color:#fff;border:none;border-radius:16px;padding:16px;font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s,transform .2s;letter-spacing:.02em;}
-.submit-btn:active{opacity:.9;transform:scale(.98);}
+/* ── HEADER ─────────────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px env(safe-area-inset-top, 0);
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+.header-left { display: flex; flex-direction: column; gap: 1px; }
+.header-logo { height: 36px; }
 
-/* EXPORT MODAL */
-#export-modal{position:fixed;inset:0;z-index:200;display:none;}
-#export-modal.open{display:block;}
-.exp-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:28px 28px 0 0;padding:12px 20px env(safe-area-inset-bottom,28px);animation:slideUp .3s ease;}
-.exp-title{font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
-.exp-sub{font-size:13px;color:var(--text2);margin-bottom:20px;}
-.exp-opt{display:flex;align-items:center;gap:14px;padding:16px;background:var(--bg2);border-radius:16px;margin-bottom:10px;border:none;cursor:pointer;width:100%;text-align:left;transition:opacity .2s;}
-.exp-opt:active{opacity:.7;}
-.exp-opt-icon{font-size:28px;flex-shrink:0;}
-.exp-opt-title{font-size:14px;font-weight:700;color:var(--text);display:block;}
-.exp-opt-sub{font-size:11px;color:var(--text2);margin-top:2px;display:block;line-height:1.4;}
-.exp-cancel{width:100%;background:var(--bg2);border:none;border-radius:14px;padding:15px;font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--text2);cursor:pointer;margin-top:4px;}
+/* Greeting text under logo */
+#header-greeting {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text2);
+  display: none; /* shown when name is set */
+}
+#header-greeting.visible { display: block; }
+#header-greeting .hi-name {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+}
 
-/* TOAST */
-.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:300;white-space:nowrap;animation:toastIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.2);}
-[data-theme="dark"] .toast{background:var(--card);color:var(--text);border:1px solid var(--border);}
-@keyframes toastIn{from{opacity:0;top:40px;}to{opacity:1;top:60px;}}
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, border-color .2s;
+  color: var(--text);
+}
+.icon-btn:hover { border-color: var(--aqua); }
 
-/* PAGE CONTENT */
-#page{max-width:500px;margin:0 auto;padding:0 16px;}
+/* ── MAIN CONTENT ───────────────────────────────────────────── */
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+}
 
-/* INSIGHTS TAB */
-.insight-card{background:var(--card);border-radius:var(--radius-sm);padding:18px;box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:12px;}
-.insight-title{font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;}
-.pie-wrap{display:flex;align-items:center;gap:20px;}
-.pie-svg{flex-shrink:0;}
-.pie-legend{display:flex;flex-direction:column;gap:8px;flex:1;}
-.pie-leg-item{display:flex;align-items:center;gap:8px;}
-.pie-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.pie-leg-name{font-size:12px;color:var(--text2);flex:1;}
-.pie-leg-pct{font-size:12px;font-weight:700;color:var(--text);}
+/* ── BOTTOM NAV ─────────────────────────────────────────────── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  z-index: 50;
+  box-shadow: 0 -4px 20px rgba(11,27,58,.06);
+}
+.nav-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 10px 8px;
+  background: none; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500;
+  color: var(--text3);
+  transition: color .2s;
+}
+.nav-tab.active { color: var(--aqua); }
+.nav-tab .tab-icon { font-size: 20px; transition: transform .2s; }
+.nav-tab.active .tab-icon { transform: scale(1.1); }
 
-/* SETTINGS TAB */
-.setting-row{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--card);border-radius:var(--radius-sm);margin-bottom:10px;box-shadow:var(--shadow-sm);border:1px solid var(--border);}
-.setting-left{display:flex;align-items:center;gap:12px;}
-.setting-icon{font-size:22px;}
-.setting-label{font-size:14px;font-weight:600;color:var(--text);}
-.setting-sub{font-size:12px;color:var(--text2);margin-top:2px;}
-.toggle{width:46px;height:26px;background:var(--border);border-radius:13px;position:relative;cursor:pointer;transition:background .3s;border:none;flex-shrink:0;}
-.toggle.on{background:var(--grad);}
-.toggle::after{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .3s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
-.toggle.on::after{transform:translateX(20px);}
+/* ── FAB ────────────────────────────────────────────────────── */
+.fab {
+  position: fixed;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  background: var(--gradient);
+  border: none;
+  font-size: 26px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-fab);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s, box-shadow .15s;
+  z-index: 51;
+}
+.fab:active { transform: scale(.93); }
+
+/* ── CARDS ──────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.card-sm { border-radius: var(--r-sm); box-shadow: var(--shadow-sm); }
+
+/* ── HERO CARD ──────────────────────────────────────────────── */
+.hero-card {
+  background: var(--gradient);
+  border: none;
+  padding: 24px 22px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.1);
+}
+.hero-card::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; left: 30px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+}
+.hero-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.8); margin-bottom: 6px; }
+.hero-balance {
+  font-family: 'Poppins', sans-serif;
+  font-size: 40px; font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+}
+.balance-chips { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.chip {
+  background: rgba(255,255,255,.2);
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 600; color: #fff;
+  display: flex; gap: 6px; align-items: center;
+}
+
+/* ── SECTION TITLE ──────────────────────────────────────────── */
+.section-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.see-all { font-size: 12px; font-weight: 500; color: var(--aqua); cursor: pointer; font-family: 'Inter', sans-serif; }
+
+/* ── STATS GRID ─────────────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.stat-card { background: var(--card); border-radius: var(--r-sm); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 16px; }
+.stat-label { font-size: 11px; font-weight: 500; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.stat-value { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 700; }
+.stat-value.income { color: var(--green); }
+.stat-value.expense { color: var(--red); }
+
+/* ── TRANSACTION ROW ────────────────────────────────────────── */
+.tx-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tx-row:last-child { border-bottom: none; }
+.tx-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.tx-info { flex: 1; min-width: 0; }
+.tx-label { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.tx-amount { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 700; }
+.tx-amount.income { color: var(--green); }
+.tx-amount.expense { color: var(--red); }
+.tx-delete { background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px; opacity: .5; transition: opacity .2s; }
+.tx-delete:hover { opacity: 1; }
+
+/* ── STREAK ─────────────────────────────────────────────────── */
+.streak-card { display: flex; align-items: center; gap: 14px; }
+.streak-badge { font-size: 28px; }
+.streak-info h3 { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 700; }
+.streak-info p { font-size: 12px; color: var(--text2); }
+.streak-days { margin-left: auto; font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 800; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* ── SPEND RATE ─────────────────────────────────────────────── */
+.spend-rate-bar { height: 8px; background: var(--bg2); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.spend-rate-fill { height: 100%; border-radius: 99px; background: var(--gradient); transition: width .6s ease; }
+
+/* ── EMPTY STATE ────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 40px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-title { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.empty-sub { font-size: 13px; color: var(--text2); }
+
+/* ── INSIGHTS ───────────────────────────────────────────────── */
+.pie-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.pie-legend { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.legend-row { display: flex; align-items: center; gap: 10px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-label { flex: 1; font-size: 13px; font-weight: 500; }
+.legend-pct { font-size: 13px; font-weight: 600; color: var(--text2); }
+
+.cat-bar-row { margin-bottom: 10px; }
+.cat-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.cat-bar-label { font-weight: 500; }
+.cat-bar-amount { font-weight: 600; color: var(--text2); }
+.cat-bar-track { height: 6px; background: var(--bg2); border-radius: 99px; overflow: hidden; }
+.cat-bar-fill { height: 100%; border-radius: 99px; }
+
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.summary-item { background: var(--bg2); border-radius: var(--r-sm); padding: 14px; }
+.summary-item .s-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.summary-item .s-val { font-family: 'Poppins', sans-serif; font-size: 17px; font-weight: 700; }
+
+/* ── SETTINGS ───────────────────────────────────────────────── */
+.settings-section { margin-bottom: 20px; }
+.settings-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding: 0 4px; }
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.settings-row:hover { background: var(--bg2); }
+.settings-row-left { display: flex; align-items: center; gap: 12px; }
+.settings-row-icon { font-size: 20px; }
+.settings-row-info .s-title { font-size: 14px; font-weight: 600; }
+.settings-row-info .s-sub { font-size: 12px; color: var(--text2); }
+.settings-row-right { font-size: 12px; color: var(--text3); }
+.settings-row-right.danger { color: var(--red); }
+.toggle { width: 44px; height: 24px; border-radius: 99px; background: var(--bg2); border: 1px solid var(--border); position: relative; cursor: pointer; transition: background .25s; }
+.toggle.on { background: var(--gradient); border-color: transparent; }
+.toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .25s; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+.toggle.on::after { left: 23px; }
+
+/* ── SHEET ──────────────────────────────────────────────────── */
+.sheet-overlay {
+  position: fixed; inset: 0; background: rgba(11,27,58,.4);
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+  backdrop-filter: blur(4px);
+}
+.sheet-overlay.visible { opacity: 1; pointer-events: all; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 201;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.32,.72,0,1);
+  max-height: 95vh;
+  overflow-y: auto;
+}
+.sheet.visible { transform: translateY(0); }
+.sheet-handle { width: 40px; height: 4px; border-radius: 99px; background: var(--border); margin: 0 auto 20px; }
+.sheet-title { font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+/* ── FORM ELEMENTS ──────────────────────────────────────────── */
+.form-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; display: block; }
+.form-input {
+  width: 100%; padding: 14px 16px;
+  font-family: 'Inter', sans-serif; font-size: 15px;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-input); color: var(--text);
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  margin-bottom: 16px;
+}
+.form-input:focus { border-color: var(--aqua); box-shadow: 0 0 0 3px rgba(49,198,227,.1); }
+
+.amount-wrap { position: relative; }
+.amount-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; font-weight: 600; color: var(--text2); }
+.amount-input { padding-left: 32px !important; font-size: 24px !important; font-weight: 700 !important; }
+
+/* ── TYPE TOGGLE ────────────────────────────────────────────── */
+.type-toggle { display: flex; background: var(--bg2); border-radius: var(--r-btn); padding: 4px; margin-bottom: 20px; gap: 4px; }
+.type-btn {
+  flex: 1; padding: 10px; border: none; border-radius: 12px;
+  font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 600;
+  background: none; color: var(--text3); cursor: pointer; transition: all .2s;
+}
+.type-btn.active.expense { background: #FF6B6B; color: #fff; }
+.type-btn.active.income  { background: var(--green); color: #fff; }
+
+/* ── CATEGORY GRID ──────────────────────────────────────────── */
+.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.cat-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 4px; border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); background: var(--bg2);
+  cursor: pointer; transition: all .2s; font-size: 10px;
+  font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text2);
+}
+.cat-btn .cat-emoji { font-size: 20px; }
+.cat-btn.selected { border-color: var(--aqua); background: rgba(49,198,227,.08); color: var(--aqua); }
+
+/* ── ADD BUTTON ─────────────────────────────────────────────── */
+.add-btn {
+  width: 100%; padding: 16px; background: var(--gradient);
+  border: none; border-radius: var(--r-btn);
+  font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 600;
+  color: #fff; cursor: pointer; box-shadow: var(--shadow-fab);
+  transition: transform .15s; margin-top: 8px;
+}
+.add-btn:active { transform: scale(.97); }
+
+/* ── EXPORT SHEET ───────────────────────────────────────────── */
+.export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.export-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 20px 12px; background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-lg); cursor: pointer; transition: all .2s;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: var(--text2);
+}
+.export-btn:hover { border-color: var(--aqua); color: var(--aqua); }
+.export-btn .e-icon { font-size: 28px; }
+
+/* ── PAGES ──────────────────────────────────────────────────── */
+.page { display: none; animation: fadeIn .25s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── HIDDEN FILE INPUT ──────────────────────────────────────── */
+#import-file, #ob-import-file { display: none; }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<div id="header">
-  <div style="max-width:500px;margin:0 auto;padding:0 16px;">
-    <div class="header-top">
-      <img src="logo.png" style="height:40px;"/>
-      <div class="header-actions">
-        <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark mode">🌙</button>
-        <button class="icon-btn" onclick="openExport()" title="Export">📤</button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- ============================================================
+     ONBOARDING SCREEN
+     ============================================================ -->
+<div id="onboarding">
 
-<!-- PAGE -->
-<div id="page"></div>
-
-<!-- FAB -->
-<button id="fab" onclick="openAddSheet()">+</button>
-
-<!-- BOTTOM NAV -->
-<div id="bottom-nav">
-  <button class="nav-btn active" onclick="switchPage('home',this)">
-    <span class="nav-icon">🏠</span>
-    <span class="nav-label">Home</span>
-  </button>
-  <button class="nav-btn" onclick="switchPage('transactions',this)">
-    <span class="nav-icon">📋</span>
-    <span class="nav-label">Transactions</span>
-  </button>
-  <button class="nav-btn" onclick="switchPage('insights',this)">
-    <span class="nav-icon">📊</span>
-    <span class="nav-label">Insights</span>
-  </button>
-  <button class="nav-btn" onclick="switchPage('settings',this)">
-    <span class="nav-icon">⚙️</span>
-    <span class="nav-label">Settings</span>
-  </button>
-</div>
-
-<!-- ADD SHEET -->
-<div id="add-sheet">
-  <div class="sheet-overlay" onclick="closeAddSheet()"></div>
-  <div class="sheet-body">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Add Transaction</div>
-
-    <div class="type-toggle">
-      <button class="type-btn expense-active" id="type-exp" onclick="setType('expense')">💸 Expense</button>
-      <button class="type-btn" id="type-inc" onclick="setType('income')">💰 Income</button>
-    </div>
-
-    <div class="field">
-      <label>Amount</label>
-      <div class="amount-wrap">
-        <span class="currency">$</span>
-        <input id="f-amount" type="number" min="0" step="0.01" placeholder="0.00" inputmode="decimal"/>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Description</label>
-      <input id="f-label" type="text" placeholder="What was this for?" autocomplete="off"/>
-    </div>
-
-    <div class="field">
-      <label>Category</label>
-      <div class="cat-picker" id="cat-picker"></div>
-    </div>
-
-    <div class="two-col">
-      <div class="field">
-        <label>Date</label>
-        <input id="f-date" type="date"/>
-      </div>
-      <div class="field" style="display:flex;flex-direction:column;justify-content:flex-end;">
-        <label>&nbsp;</label>
-        <button class="submit-btn" onclick="addEntry()" style="margin-top:0;padding:14px;">Add ✓</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- EXPORT MODAL -->
-<div id="export-modal">
-  <div class="sheet-overlay" onclick="closeExport()"></div>
-  <div class="exp-sheet">
-    <div class="sheet-handle"></div>
-    <div class="exp-title">Export Report</div>
-    <div class="exp-sub" id="exp-sub"></div>
-    <button class="exp-opt" onclick="exportExcel()">
-      <span class="exp-opt-icon">📊</span>
-      <div>
-        <span class="exp-opt-title">Excel (.xlsx)</span>
-        <span class="exp-opt-sub">3 sheets: Income, Expenses & Summary. Opens in Excel, Numbers or Google Sheets.</span>
-      </div>
-    </button>
-    <button class="exp-opt" onclick="exportCSV()">
-      <span class="exp-opt-icon">📄</span>
-      <div>
-        <span class="exp-opt-title">CSV File</span>
-        <span class="exp-opt-sub">Universal format. Import into any spreadsheet app.</span>
-      </div>
-    </button>
-    <button class="exp-opt" onclick="exportJSON()">
-      <span class="exp-opt-icon">💾</span>
-      <div>
-        <span class="exp-opt-title">JSON Backup</span>
-        <span class="exp-opt-sub">Full data backup. Use to restore your data later.</span>
-      </div>
-    </button>
-    <button class="exp-opt" onclick="openGoogleSheets()">
-      <span class="exp-opt-icon">🟢</span>
-      <div>
-        <span class="exp-opt-title">Google Sheets</span>
-        <span class="exp-opt-sub">Downloads CSV then opens a new Google Sheet for import.</span>
-      </div>
-    </button>
-    <button class="exp-cancel" onclick="closeExport()">Cancel</button>
-  </div>
-</div>
-
-<script>
-// ── CATEGORIES ───────────────────────────────────────────────────
-const CATS = {
-  expense: [
-    {id:'food',       label:'Food',          icon:'🍔', color:'#FF6B6B'},
-    {id:'shopping',   label:'Shopping',      icon:'🛍️', color:'#A78BFA'},
-    {id:'bills',      label:'Bills',         icon:'🧾', color:'#FB923C'},
-    {id:'transport',  label:'Transport',     icon:'🚗', color:'#60A5FA'},
-    {id:'health',     label:'Health',        icon:'💊', color:'#34D399'},
-    {id:'entertain',  label:'Fun',           icon:'🎬', color:'#F472B6'},
-    {id:'savings',    label:'Savings',       icon:'🏦', color:'#FACC15'},
-    {id:'other',      label:'Other',         icon:'📦', color:'#94A3B8'},
-  ],
-  income: [
-    {id:'salary',     label:'Salary',        icon:'💼', color:'#34D399'},
-    {id:'freelance',  label:'Freelance',     icon:'💻', color:'#60A5FA'},
-    {id:'bonus',      label:'Bonus',         icon:'🎁', color:'#FACC15'},
-    {id:'investment', label:'Investment',    icon:'📈', color:'#A78BFA'},
-    {id:'gift',       label:'Gift',          icon:'🎀', color:'#F472B6'},
-    {id:'refund',     label:'Refund',        icon:'↩️', color:'#FB923C'},
-    {id:'rental',     label:'Rental',        icon:'🏠', color:'#31C6E3'},
-    {id:'other',      label:'Other',         icon:'💰', color:'#94A3B8'},
-  ]
-};
-
-// ── DATA ─────────────────────────────────────────────────────────
-let data = {income:[], expenses:[], streak:0, lastTracked:null};
-let currentPage = 'home';
-let formType = 'expense';
-let selectedCat = 'food';
-let isDark = false;
-
-try {
-  const s = localStorage.getItem('spendie-data');
-  if(s) data = {...data, ...JSON.parse(s)};
-} catch(e){}
-
-try {
-  isDark = localStorage.getItem('spendie-dark') === '1';
-  if(isDark){ document.documentElement.setAttribute('data-theme','dark'); document.getElementById('theme-btn').textContent='☀️'; }
-} catch(e){}
-
-function save(){
-  try { localStorage.setItem('spendie-data', JSON.stringify(data)); } catch(e){}
-}
-
-function fmt(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n||0); }
-function fmtShort(n){
-  if(n>=1000) return '$'+(n/1000).toFixed(1)+'k';
-  return fmt(n);
-}
-
-// ── STREAK ───────────────────────────────────────────────────────
-function updateStreak(){
-  const today = new Date().toDateString();
-  if(data.lastTracked !== today){
-    const yesterday = new Date(Date.now()-86400000).toDateString();
-    if(data.lastTracked === yesterday) data.streak = (data.streak||0)+1;
-    else if(data.lastTracked !== today) data.streak = 1;
-    data.lastTracked = today;
-    save();
-  }
-}
-
-// ── THEME ─────────────────────────────────────────────────────────
-function toggleTheme(){
-  isDark = !isDark;
-  document.documentElement.setAttribute('data-theme', isDark?'dark':'light');
-  document.getElementById('theme-btn').textContent = isDark?'☀️':'🌙';
-  document.querySelector('meta[name="theme-color"]').content = isDark?'#0F172A':'#F8FAFC';
-  try { localStorage.setItem('spendie-dark', isDark?'1':'0'); } catch(e){}
-}
-
-// ── TOTALS ────────────────────────────────────────────────────────
-function totIncome(){ return data.income.reduce((s,i)=>s+i.amount,0); }
-function totExpenses(){ return data.expenses.reduce((s,i)=>s+i.amount,0); }
-function savings(){ return Math.max(0, totIncome()-totExpenses()); }
-
-// ── PAGES ─────────────────────────────────────────────────────────
-function switchPage(page, btn){
-  currentPage = page;
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  render();
-}
-
-function render(){
-  const pg = document.getElementById('page');
-  if(currentPage==='home') pg.innerHTML = renderHome();
-  else if(currentPage==='transactions') pg.innerHTML = renderTransactions();
-  else if(currentPage==='insights') pg.innerHTML = renderInsights();
-  else if(currentPage==='settings') pg.innerHTML = renderSettings();
-}
-
-// ── HOME PAGE ─────────────────────────────────────────────────────
-function renderHome(){
-  const ti=totIncome(), te=totExpenses(), bal=ti-te, sav=savings();
-  const spendPct = ti>0?Math.min(100,Math.round((te/ti)*100)):0;
-  const isDanger = spendPct>85;
-  const recent = [...data.income.map(e=>({...e,type:'income'})), ...data.expenses.map(e=>({...e,type:'expense'}))]
-    .sort((a,b)=>b.id-a.id).slice(0,5);
-
-  return `
-  <!-- BALANCE HERO -->
-  <div class="balance-hero" style="margin-top:12px;">
-    <div class="balance-tag">Total Balance</div>
-    <div class="balance-amount">${fmt(bal)}</div>
-    <div class="balance-tagline">${bal>=0?"You're doing great! Keep it up 🌿":"Watch your spending ⚠️"}</div>
-    <div class="balance-chips">
-      <div class="b-chip">
-        <span class="b-chip-icon">↑</span>
-        <div><div class="b-chip-val">${fmtShort(ti)}</div><div class="b-chip-lbl">Income</div></div>
-      </div>
-      <div class="b-chip">
-        <span class="b-chip-icon">↓</span>
-        <div><div class="b-chip-val">${fmtShort(te)}</div><div class="b-chip-lbl">Expenses</div></div>
-      </div>
-      <div class="b-chip">
-        <span class="b-chip-icon">🏦</span>
-        <div><div class="b-chip-val">${fmtShort(sav)}</div><div class="b-chip-lbl">Saved</div></div>
-      </div>
-    </div>
+  <!-- STEP 1: Welcome -->
+  <div class="ob-step active" id="ob-step-1">
+    <div class="ob-logo">💰</div>
+    <h1 class="ob-title">Welcome to<br/><span style="background:linear-gradient(135deg,#7EE081,#31C6E3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Spendie</span></h1>
+    <p class="ob-sub">Track income. Track expenses.<br/><span>Stay in control.</span></p>
+    <button class="ob-btn-primary" onclick="goToStep(2)">Get Started 🚀</button>
   </div>
 
-  <!-- STREAK -->
-  ${data.streak>0?`
-  <div class="streak-card" style="margin-top:12px;">
-    <div class="streak-icon">🔥</div>
-    <div>
-      <div class="streak-title">Tracking Streak!</div>
-      <div class="streak-sub">You've tracked ${data.streak} day${data.streak>1?'s':''} in a row</div>
-    </div>
-    <div class="streak-badge">${data.streak} 🔥</div>
-  </div>`:''}
-
-  <!-- SPEND BAR -->
-  ${ti>0?`
-  <div class="spend-card" style="margin-top:12px;">
-    <div class="spend-top">
-      <span class="spend-lbl">Monthly Spend Rate</span>
-      <span class="spend-pct-badge" style="background:${isDanger?'rgba(255,107,107,.15)':'rgba(52,211,153,.15)'};color:${isDanger?'#FF6B6B':'#34D399'}">${spendPct}%</span>
-    </div>
-    <div class="spend-track"><div class="spend-fill ${isDanger?'danger':''}" style="width:${spendPct}%"></div></div>
-    <div class="spend-sub">${fmt(ti-te)} remaining of ${fmt(ti)} income</div>
-  </div>`:''}
-
-  <!-- STATS -->
-  <div class="stats-row" style="margin-top:12px;">
-    <div class="stat-card">
-      <div class="stat-icon" style="background:rgba(52,211,153,.15);">💰</div>
-      <div class="stat-label">Income</div>
-      <div class="stat-value" style="color:#34D399;">${fmtShort(ti)}</div>
-      <div class="stat-count">${data.income.length} entries</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon" style="background:rgba(255,107,107,.15);">💸</div>
-      <div class="stat-label">Expenses</div>
-      <div class="stat-value" style="color:#FF6B6B;">${fmtShort(te)}</div>
-      <div class="stat-count">${data.expenses.length} entries</div>
-    </div>
-  </div>
-
-  <!-- RECENT TRANSACTIONS -->
-  <div class="sec-row">
-    <div class="sec-title" style="margin:0;">Recent</div>
-    <button class="sec-link" onclick="switchPage('transactions',document.querySelectorAll('.nav-btn')[1])">See all</button>
-  </div>
-
-  ${recent.length===0?`
-    <div class="empty-state">
-      <div class="empty-emoji">💸</div>
-      <div class="empty-title">No transactions yet</div>
-      <div class="empty-sub">Tap the + button below to add your first income or expense</div>
-      <button class="empty-cta" onclick="openAddSheet()">+ Add Transaction</button>
-    </div>
-  `:`
-    <div class="txn-card">
-      ${recent.map((e,i)=>{
-        const cat = getCat(e.type, e.category);
-        return `${i>0?'<div class="txn-divider"></div>':''}
-        <div class="txn-row">
-          <div class="txn-icon-wrap" style="background:${cat.color}22;">${cat.icon}</div>
-          <div class="txn-info">
-            <div class="txn-label">${e.label}</div>
-            <div class="txn-meta">${cat.label} · ${e.date}</div>
-          </div>
-          <div class="txn-amt" style="color:${e.type==='income'?'#34D399':'#FF6B6B'}">${e.type==='income'?'+':'−'}${fmt(e.amount)}</div>
-          <button class="txn-del" onclick="deleteEntry('${e.type==='income'?'income':'expenses'}',${e.id})">×</button>
-        </div>`;
-      }).join('')}
-    </div>
-  `}
-  <div style="height:20px;"></div>`;
-}
-
-// ── TRANSACTIONS PAGE ─────────────────────────────────────────────
-function renderTransactions(){
-  const all = [...data.income.map(e=>({...e,type:'income'})), ...data.expenses.map(e=>({...e,type:'expense'}))]
-    .sort((a,b)=>b.id-a.id);
-  return `
-  <div style="margin-top:12px;">
-    <div class="sec-title">All Transactions</div>
-    ${all.length===0?`
-      <div class="empty-state">
-        <div class="empty-emoji">📋</div>
-        <div class="empty-title">Nothing here yet</div>
-        <div class="empty-sub">Your transactions will appear here once you add them</div>
-        <button class="empty-cta" onclick="openAddSheet()">+ Add Transaction</button>
-      </div>
-    `:`
-      <div class="txn-card">
-        ${all.map((e,i)=>{
-          const cat = getCat(e.type, e.category);
-          return `${i>0?'<div class="txn-divider"></div>':''}
-          <div class="txn-row">
-            <div class="txn-icon-wrap" style="background:${cat.color}22;">${cat.icon}</div>
-            <div class="txn-info">
-              <div class="txn-label">${e.label}</div>
-              <div class="txn-meta">${cat.label} · ${e.date}</div>
-            </div>
-            <div class="txn-amt" style="color:${e.type==='income'?'#34D399':'#FF6B6B'}">${e.type==='income'?'+':'−'}${fmt(e.amount)}</div>
-            <button class="txn-del" onclick="deleteEntry('${e.type==='income'?'income':'expenses'}',${e.id})">×</button>
-          </div>`;
-        }).join('')}
-      </div>
-    `}
-    <div style="height:20px;"></div>
-  </div>`;
-}
-
-// ── INSIGHTS PAGE ─────────────────────────────────────────────────
-function renderInsights(){
-  const te = totExpenses(), ti = totIncome();
-  // build category totals
-  const catTotals = CATS.expense.map(cat=>{
-    const total = data.expenses.filter(e=>e.category===cat.id).reduce((s,e)=>s+e.amount,0);
-    return {...cat, total};
-  }).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
-  const maxCat = catTotals[0]?.total||1;
-
-  // simple pie (SVG)
-  let pie = '';
-  if(catTotals.length>0){
-    let offset=0;
-    const r=40, cx=50, cy=50, circumference=2*Math.PI*r;
-    pie = `<svg class="pie-svg" width="100" height="100" viewBox="0 0 100 100">
-      ${catTotals.map(cat=>{
-        const pct = cat.total/te;
-        const dash = pct*circumference;
-        const gap = circumference-dash;
-        const el = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cat.color}" stroke-width="18"
-          stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset*circumference}" transform="rotate(-90 50 50)" opacity=".85"/>`;
-        offset += pct;
-        return el;
-      }).join('')}
-      <circle cx="50" cy="50" r="28" fill="var(--card)"/>
-      <text x="50" y="46" text-anchor="middle" font-size="9" fill="var(--text2)" font-family="Inter">Spent</text>
-      <text x="50" y="58" text-anchor="middle" font-size="10" fill="var(--text)" font-weight="700" font-family="Poppins">${fmtShort(te)}</text>
-    </svg>`;
-  }
-
-  return `
-  <div style="margin-top:12px;">
-    <div class="sec-title">Insights</div>
-
-    ${te===0?`
-      <div class="empty-state">
-        <div class="empty-emoji">📊</div>
-        <div class="empty-title">No data yet</div>
-        <div class="empty-sub">Add some expenses to see your spending insights</div>
-      </div>
-    `:`
-      <!-- PIE CHART -->
-      <div class="insight-card">
-        <div class="insight-title">Spending by Category</div>
-        <div class="pie-wrap">
-          ${pie}
-          <div class="pie-legend">
-            ${catTotals.slice(0,5).map(cat=>`
-              <div class="pie-leg-item">
-                <div class="pie-leg-dot" style="background:${cat.color}"></div>
-                <span class="pie-leg-name">${cat.label}</span>
-                <span class="pie-leg-pct">${Math.round((cat.total/te)*100)}%</span>
-              </div>`).join('')}
-          </div>
+  <!-- STEP 2: New or Returning? -->
+  <div class="ob-step" id="ob-step-2">
+    <div class="ob-logo" style="font-size:28px;">👋</div>
+    <h1 class="ob-title">Have you used<br/>Spendie before?</h1>
+    <p class="ob-sub" style="margin-bottom:28px;">Pick an option to continue</p>
+    <div class="ob-choice-grid">
+      <button class="ob-choice-card" onclick="goToStep(4)">
+        <div class="ob-choice-icon green">📂</div>
+        <div class="ob-choice-info">
+          <h3>Import Backup</h3>
+          <p>Restore your data from a JSON backup file</p>
         </div>
-      </div>
-
-      <!-- CATEGORY BARS -->
-      <div class="cat-card">
-        <div class="insight-title">Top Expenses</div>
-        ${catTotals.map(cat=>`
-          <div class="cat-item">
-            <div class="cat-dot" style="background:${cat.color}"></div>
-            <span class="cat-item-name">${cat.icon} ${cat.label}</span>
-            <div class="cat-item-bar-wrap">
-              <div class="cat-item-bar" style="width:${Math.round((cat.total/maxCat)*100)}%;background:${cat.color};"></div>
-            </div>
-            <span class="cat-item-amt">${fmt(cat.total)}</span>
-          </div>`).join('')}
-      </div>
-
-      <!-- SUMMARY CARD -->
-      <div class="insight-card">
-        <div class="insight-title">Summary</div>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          ${[
-            {label:'Total Income', val:fmt(ti), color:'#34D399'},
-            {label:'Total Expenses', val:fmt(te), color:'#FF6B6B'},
-            {label:'Net Savings', val:fmt(savings()), color:'#31C6E3'},
-            {label:'Savings Rate', val:ti>0?Math.round((savings()/ti)*100)+'%':'—', color:'#A78BFA'},
-          ].map(r=>`
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-size:13px;color:var(--text2);">${r.label}</span>
-              <span style="font-size:15px;font-weight:700;color:${r.color};">${r.val}</span>
-            </div>`).join('')}
+      </button>
+      <button class="ob-choice-card" onclick="goToStep(3)">
+        <div class="ob-choice-icon blue">✨</div>
+        <div class="ob-choice-info">
+          <h3>I'm New Here</h3>
+          <p>Start fresh and set up your profile</p>
         </div>
-      </div>
-    `}
-    <div style="height:20px;"></div>
-  </div>`;
-}
-
-// ── SETTINGS PAGE ─────────────────────────────────────────────────
-function renderSettings(){
-  return `
-  <div style="margin-top:12px;">
-    <div class="sec-title">Settings</div>
-    <div class="setting-row">
-      <div class="setting-left">
-        <span class="setting-icon">🌙</span>
-        <div>
-          <div class="setting-label">Dark Mode</div>
-          <div class="setting-sub">Easy on the eyes at night</div>
-        </div>
-      </div>
-      <button class="toggle ${isDark?'on':''}" onclick="toggleTheme();render();"></button>
-    </div>
-    <div class="setting-row" onclick="openExport()" style="cursor:pointer;">
-      <div class="setting-left">
-        <span class="setting-icon">📤</span>
-        <div>
-          <div class="setting-label">Export Data</div>
-          <div class="setting-sub">Excel, CSV or JSON backup</div>
-        </div>
-      </div>
-      <span style="color:var(--text3);font-size:18px;">›</span>
-    </div>
-    <div class="setting-row" onclick="importJSON()" style="cursor:pointer;">
-      <div class="setting-left">
-        <span class="setting-icon">📥</span>
-        <div>
-          <div class="setting-label">Import Backup</div>
-          <div class="setting-sub">Restore from JSON backup file</div>
-        </div>
-      </div>
-      <span style="color:var(--text3);font-size:18px;">›</span>
-    </div>
-    <div class="setting-row">
-      <div class="setting-left">
-        <span class="setting-icon">🔥</span>
-        <div>
-          <div class="setting-label">Tracking Streak</div>
-          <div class="setting-sub">Days tracked in a row</div>
-        </div>
-      </div>
-      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:#FB923C;">${data.streak||0} days</span>
-    </div>
-    <div class="setting-row">
-      <div class="setting-left">
-        <span class="setting-icon">📊</span>
-        <div>
-          <div class="setting-label">Total Entries</div>
-          <div class="setting-sub">Income + Expense records</div>
-        </div>
-      </div>
-      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--aqua);">${data.income.length+data.expenses.length}</span>
-    </div>
-    <div style="margin-top:20px;">
-      <button onclick="clearAllData()" style="width:100%;background:rgba(255,107,107,.1);border:1.5px solid rgba(255,107,107,.3);color:#FF6B6B;border-radius:14px;padding:15px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
-        🗑️ Clear All Data
       </button>
     </div>
-    <div style="text-align:center;margin-top:24px;color:var(--text3);font-size:12px;">
-      Spendie v2.0 · Made with ❤️ by Rafay
+  </div>
+
+  <!-- STEP 3: Enter Name -->
+  <div class="ob-step" id="ob-step-3">
+    <div class="ob-logo" style="font-size:30px;">😊</div>
+    <h1 class="ob-title">What should<br/>we call you?</h1>
+    <p class="ob-sub" style="margin-bottom:28px;">Your name will appear in the app greeting</p>
+    <div class="ob-input-wrap">
+      <input class="ob-input" id="ob-name-input" type="text" placeholder="Enter your name…" maxlength="30" autocomplete="off"/>
     </div>
-    <div style="height:20px;"></div>
+    <button class="ob-btn-primary" onclick="finishOnboarding()">Let's Go! 🎉</button>
+    <button class="ob-btn-secondary" onclick="goToStep(2)">← Back</button>
+  </div>
+
+  <!-- STEP 4: Import Backup -->
+  <div class="ob-step" id="ob-step-4">
+    <div class="ob-logo" style="font-size:28px;">📂</div>
+    <h1 class="ob-title">Import<br/>Your Backup</h1>
+    <p class="ob-sub" style="margin-bottom:28px;">Select the JSON backup file you exported from Spendie</p>
+    <button class="ob-btn-primary" onclick="document.getElementById('ob-import-file').click()">Choose Backup File</button>
+    <input type="file" id="ob-import-file" accept=".json" onchange="handleObImport(event)"/>
+    <p class="ob-import-note">Don't have a backup? <a onclick="goToStep(3)">Start fresh instead</a></p>
+    <button class="ob-btn-secondary" onclick="goToStep(2)" style="margin-top:8px;">← Back</button>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     APP
+     ============================================================ -->
+<div id="app">
+
+  <!-- UPDATE BANNER -->
+  <div id="update-banner">
+    <span class="banner-icon">🔔</span>
+    <div class="banner-text">
+      <strong>Spendie has been updated!</strong> Please export a backup before refreshing to keep your data safe.
+    </div>
+    <div class="banner-btns">
+      <button class="banner-btn primary" onclick="openExportSheet()">Backup</button>
+      <button class="banner-btn ghost" onclick="dismissBanner()">✕</button>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <!-- Inline SVG logo (wallet + gradient) -->
+      <svg class="header-logo" viewBox="0 0 120 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="120" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7EE081"/>
+            <stop offset="100%" stop-color="#31C6E3"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="4" width="28" height="28" rx="8" fill="url(#lg)"/>
+        <text x="5" y="24" font-size="18" font-family="Arial">💰</text>
+        <text x="36" y="26" font-family="Poppins,sans-serif" font-weight="800" font-size="22" fill="url(#lg)">Spendie</text>
+      </svg>
+      <div id="header-greeting"></div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
+      <button class="icon-btn" onclick="openExportSheet()" title="Export">📤</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- HOME PAGE -->
+    <div class="page active" id="page-home">
+      <div id="home-content"></div>
+    </div>
+
+    <!-- TRANSACTIONS PAGE -->
+    <div class="page" id="page-tx">
+      <div id="tx-content"></div>
+    </div>
+
+    <!-- INSIGHTS PAGE -->
+    <div class="page" id="page-insights">
+      <div id="insights-content"></div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div id="settings-content"></div>
+    </div>
+
+  </main>
+
+  <!-- FAB -->
+  <button class="fab" onclick="openAddSheet()" title="Add transaction">＋</button>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-tab active" data-page="home" onclick="switchPage('home',this)">
+      <span class="tab-icon">🏠</span>Home
+    </button>
+    <button class="nav-tab" data-page="tx" onclick="switchPage('tx',this)">
+      <span class="tab-icon">📋</span>Transactions
+    </button>
+    <button class="nav-tab" data-page="insights" onclick="switchPage('insights',this)">
+      <span class="tab-icon">📊</span>Insights
+    </button>
+    <button class="nav-tab" data-page="settings" onclick="switchPage('settings',this)">
+      <span class="tab-icon">⚙️</span>Settings
+    </button>
+  </nav>
+
+</div>
+
+<!-- ── ADD TRANSACTION SHEET ──────────────────────────────── -->
+<div class="sheet-overlay" id="add-overlay" onclick="closeAddSheet()"></div>
+<div class="sheet" id="add-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Add Transaction</div>
+  <div class="type-toggle">
+    <button class="type-btn active expense" id="btn-expense" onclick="setType('expense')">💸 Expense</button>
+    <button class="type-btn income" id="btn-income" onclick="setType('income')">💵 Income</button>
+  </div>
+  <label class="form-label">Amount</label>
+  <div class="amount-wrap">
+    <span class="amount-prefix">$</span>
+    <input class="form-input amount-input" id="f-amount" type="number" min="0" step="0.01" placeholder="0.00"/>
+  </div>
+  <label class="form-label">Description</label>
+  <input class="form-input" id="f-desc" type="text" placeholder="What was this for?"/>
+  <label class="form-label">Category</label>
+  <div class="cat-grid" id="cat-grid"></div>
+  <label class="form-label">Date</label>
+  <input class="form-input" id="f-date" type="date"/>
+  <button class="add-btn" onclick="addTransaction()">Add Transaction</button>
+</div>
+
+<!-- ── EXPORT SHEET ───────────────────────────────────────── -->
+<div class="sheet-overlay" id="exp-overlay" onclick="closeExportSheet()"></div>
+<div class="sheet" id="exp-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Export Data</div>
+  <div class="export-grid">
+    <button class="export-btn" onclick="exportExcel()"><span class="e-icon">📊</span>Excel (.xlsx)</button>
+    <button class="export-btn" onclick="exportCSV()"><span class="e-icon">📄</span>CSV</button>
+    <button class="export-btn" onclick="exportJSON()"><span class="e-icon">💾</span>JSON Backup</button>
+    <button class="export-btn" onclick="exportGSheets()"><span class="e-icon">📋</span>Google Sheets</button>
+  </div>
+  <p style="font-size:12px;color:var(--text3);margin-top:16px;text-align:center;">Files named: spendie-report-YYYY-MM-DD</p>
+  <div style="margin-top:16px;">
+    <label class="form-label">Import JSON Backup</label>
+    <button class="ob-btn-secondary" style="width:100%;margin-top:0;" onclick="document.getElementById('import-file').click()">📂 Choose Backup File</button>
+    <input type="file" id="import-file" accept=".json" onchange="importJSON(event)"/>
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+/* ── UPDATE BANNER CONTROL ─────────────────────────────────────
+   Change SHOW_UPDATE_BANNER to true when you push a new update.
+   Users will see the banner once until they dismiss it.
+   Set back to false after the update period is over.
+   ──────────────────────────────────────────────────────────── */
+const SHOW_UPDATE_BANNER = false;
+const BANNER_VERSION = 'v2.1'; // Change this with each update
+
+/* ── CATEGORIES ──────────────────────────────────────────────── */
+const CATS = {
+  expense: [
+    { id:'food',      label:'Food',      icon:'🍔', color:'#FF6B6B' },
+    { id:'shopping',  label:'Shopping',  icon:'🛍️', color:'#A78BFA' },
+    { id:'bills',     label:'Bills',     icon:'🧾', color:'#FB923C' },
+    { id:'transport', label:'Transport', icon:'🚗', color:'#60A5FA' },
+    { id:'health',    label:'Health',    icon:'💊', color:'#34D399' },
+    { id:'entertain', label:'Fun',       icon:'🎬', color:'#F472B6' },
+    { id:'savings',   label:'Savings',   icon:'🏦', color:'#FACC15' },
+    { id:'other',     label:'Other',     icon:'📦', color:'#94A3B8' },
+  ],
+  income: [
+    { id:'salary',     label:'Salary',     icon:'💼', color:'#34D399' },
+    { id:'freelance',  label:'Freelance',  icon:'💻', color:'#60A5FA' },
+    { id:'bonus',      label:'Bonus',      icon:'🎁', color:'#FACC15' },
+    { id:'investment', label:'Investment', icon:'📈', color:'#A78BFA' },
+    { id:'gift',       label:'Gift',       icon:'🎀', color:'#F472B6' },
+    { id:'refund',     label:'Refund',     icon:'↩️', color:'#FB923C' },
+    { id:'rental',     label:'Rental',     icon:'🏠', color:'#31C6E3' },
+    { id:'other',      label:'Other',      icon:'💰', color:'#94A3B8' },
+  ],
+};
+
+/* ── DATA ────────────────────────────────────────────────────── */
+let data = { income: [], expenses: [], streak: 0, lastTracked: null };
+let currentType = 'expense';
+let selectedCat = '';
+let currentPage = 'home';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem('spendie-data');
+    if (raw) data = JSON.parse(raw);
+  } catch(e) {}
+}
+function saveData() {
+  localStorage.setItem('spendie-data', JSON.stringify(data));
+}
+function fmt(n) {
+  return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function dateStr(d) {
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function catInfo(type, id) {
+  return (CATS[type] || CATS.expense).find(c => c.id === id) || { label:'Other', icon:'📦', color:'#94A3B8' };
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+
+/* ── DARK MODE ───────────────────────────────────────────────── */
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('spendie-dark', document.body.classList.contains('dark') ? '1' : '0');
+}
+if (localStorage.getItem('spendie-dark') === '1') document.body.classList.add('dark');
+
+/* ── STREAK ──────────────────────────────────────────────────── */
+function updateStreak() {
+  const todayStr = new Date().toDateString();
+  if (data.lastTracked === todayStr) return;
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = yesterday.toDateString();
+  if (data.lastTracked === yStr) { data.streak = (data.streak || 0) + 1; }
+  else { data.streak = 1; }
+  data.lastTracked = todayStr;
+}
+
+/* ── ONBOARDING ──────────────────────────────────────────────── */
+function goToStep(n) {
+  document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('ob-step-' + n).classList.add('active');
+}
+
+function finishOnboarding(name) {
+  const n = name || document.getElementById('ob-name-input').value.trim() || 'there';
+  localStorage.setItem('spendie-name', n);
+  localStorage.setItem('spendie-onboarded', '1');
+  updateGreeting(n);
+  const ob = document.getElementById('onboarding');
+  ob.classList.add('hidden');
+  setTimeout(() => ob.style.display = 'none', 400);
+}
+
+function handleObImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
+      data = imported;
+      saveData();
+      // Get name from data or prompt
+      const savedName = localStorage.getItem('spendie-name') || '';
+      finishOnboarding(savedName || 'there');
+      alert('✅ Backup restored successfully!');
+    } catch(err) { alert('Could not read backup file. Make sure it\'s a valid Spendie JSON backup.'); }
+  };
+  reader.readAsText(file);
+}
+
+function updateGreeting(name) {
+  const el = document.getElementById('header-greeting');
+  if (name && name !== 'there') {
+    el.innerHTML = `Hi, <span class="hi-name">${name}</span> 👋`;
+    el.classList.add('visible');
+  }
+}
+
+function checkOnboarding() {
+  if (localStorage.getItem('spendie-onboarded') === '1') {
+    document.getElementById('onboarding').style.display = 'none';
+    const name = localStorage.getItem('spendie-name') || '';
+    updateGreeting(name);
+  }
+}
+
+/* ── UPDATE BANNER ───────────────────────────────────────────── */
+function initBanner() {
+  if (!SHOW_UPDATE_BANNER) return;
+  const dismissed = localStorage.getItem('spendie-banner-dismissed');
+  if (dismissed === BANNER_VERSION) return;
+  document.getElementById('update-banner').classList.add('visible');
+}
+
+function dismissBanner() {
+  localStorage.setItem('spendie-banner-dismissed', BANNER_VERSION);
+  document.getElementById('update-banner').classList.remove('visible');
+}
+
+/* ── PAGE SWITCHING ──────────────────────────────────────────── */
+function switchPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  btn.classList.add('active');
+  currentPage = page;
+  renderPage(page);
+}
+
+function renderPage(page) {
+  if      (page === 'home')     renderHome();
+  else if (page === 'tx')       renderTransactions();
+  else if (page === 'insights') renderInsights();
+  else if (page === 'settings') renderSettings();
+}
+
+/* ── HOME ────────────────────────────────────────────────────── */
+function renderHome() {
+  const totalIncome  = data.income.reduce((s, t) => s + t.amount, 0);
+  const totalExpense = data.expenses.reduce((s, t) => s + t.amount, 0);
+  const balance      = totalIncome - totalExpense;
+  const saved        = totalIncome - totalExpense;
+  const spendRate    = totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 100) : 0;
+  const recent       = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
+    .sort((a, b) => b.id - a.id).slice(0, 5);
+
+  let html = `
+    <div class="card hero-card">
+      <div class="hero-label">Total Balance</div>
+      <div class="hero-balance">${fmt(balance)}</div>
+      <div class="balance-chips">
+        <div class="chip">⬆️ ${fmt(totalIncome)}</div>
+        <div class="chip">⬇️ ${fmt(totalExpense)}</div>
+        <div class="chip">💚 ${fmt(saved > 0 ? saved : 0)}</div>
+      </div>
+    </div>`;
+
+  if ((data.streak || 0) > 0) {
+    html += `
+    <div class="card card-sm">
+      <div class="streak-card">
+        <div class="streak-badge">🔥</div>
+        <div class="streak-info">
+          <h3>Tracking Streak</h3>
+          <p>Keep adding daily to grow it!</p>
+        </div>
+        <div class="streak-days">${data.streak}d</div>
+      </div>
+    </div>`;
+  }
+
+  if (totalIncome > 0) {
+    html += `
+    <div class="card card-sm">
+      <div class="section-title" style="margin-bottom:8px;">Spend Rate</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px;">
+        <span>${fmt(totalExpense)} spent</span><span>${spendRate.toFixed(0)}%</span>
+      </div>
+      <div class="spend-rate-bar"><div class="spend-rate-fill" style="width:${spendRate}%"></div></div>
+    </div>`;
+  }
+
+  html += `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Total Income</div><div class="stat-value income">${fmt(totalIncome)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value expense">${fmt(totalExpense)}</div></div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="section-title">Recent Transactions <span class="see-all" onclick="switchPage('tx',document.querySelector('[data-page=tx]'))">See all</span></div>`;
+
+  if (recent.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Tap + to add your first one</div></div>`;
+  } else {
+    recent.forEach(t => {
+      const cat = catInfo(t.type, t.category);
+      html += txRow(t, cat);
+    });
+  }
+  html += `</div>`;
+  document.getElementById('home-content').innerHTML = html;
+}
+
+/* ── TRANSACTIONS ────────────────────────────────────────────── */
+function renderTransactions() {
+  const all = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
+    .sort((a, b) => b.id - a.id);
+
+  let html = `<div class="section-title" style="margin-bottom:14px;">All Transactions</div>`;
+  if (all.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Start tracking to see your history here</div></div>`;
+  } else {
+    html += `<div class="card">`;
+    all.forEach(t => {
+      const cat = catInfo(t.type, t.category);
+      html += txRow(t, cat, true);
+    });
+    html += `</div>`;
+  }
+  document.getElementById('tx-content').innerHTML = html;
+}
+
+function txRow(t, cat, showDelete = false) {
+  const sign = t.type === 'income' ? '+' : '-';
+  const cls  = t.type === 'income' ? 'income' : 'expense';
+  const del  = showDelete ? `<button class="tx-delete" onclick="deleteTransaction('${t.type}',${t.id})">🗑️</button>` : '';
+  return `
+  <div class="tx-row">
+    <div class="tx-icon" style="background:${cat.color}22;">${cat.icon}</div>
+    <div class="tx-info">
+      <div class="tx-label">${t.label || 'Untitled'}</div>
+      <div class="tx-meta">${cat.label} · ${dateStr(t.date)}</div>
+    </div>
+    <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
+    ${del}
   </div>`;
 }
 
-// ── ADD SHEET ─────────────────────────────────────────────────────
-function openAddSheet(){
-  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('f-amount').value = '';
-  document.getElementById('f-label').value = '';
-  renderCatPicker();
-  document.getElementById('add-sheet').classList.add('open');
-  setTimeout(()=>document.getElementById('f-amount').focus(),300);
-}
-function closeAddSheet(){
-  document.getElementById('add-sheet').classList.remove('open');
+function deleteTransaction(type, id) {
+  if (!confirm('Delete this transaction?')) return;
+  const arr = type === 'income' ? data.income : data.expenses;
+  const idx = arr.findIndex(t => t.id == id);
+  if (idx !== -1) arr.splice(idx, 1);
+  saveData();
+  renderPage(currentPage);
 }
 
-function setType(type){
-  formType = type;
-  selectedCat = type==='expense'?'food':'salary';
-  document.getElementById('type-exp').className = 'type-btn'+(type==='expense'?' expense-active':'');
-  document.getElementById('type-inc').className = 'type-btn'+(type==='income'?' income-active':'');
-  renderCatPicker();
-}
+/* ── INSIGHTS ────────────────────────────────────────────────── */
+function renderInsights() {
+  const totalIncome  = data.income.reduce((s, t) => s + t.amount, 0);
+  const totalExpense = data.expenses.reduce((s, t) => s + t.amount, 0);
+  const net = totalIncome - totalExpense;
+  const rate = totalIncome > 0 ? ((net / totalIncome) * 100).toFixed(1) : 0;
 
-function renderCatPicker(){
-  const cats = CATS[formType];
-  document.getElementById('cat-picker').innerHTML = cats.map(cat=>`
-    <button class="cat-pick-btn ${selectedCat===cat.id?'selected':''}" onclick="selectCat('${cat.id}')">
-      <span class="cat-pick-icon">${cat.icon}</span>
-      <span class="cat-pick-lbl">${cat.label}</span>
-    </button>`).join('');
-}
-
-function selectCat(id){
-  selectedCat = id;
-  renderCatPicker();
-}
-
-function getCat(type, id){
-  const list = CATS[type==='income'?'income':'expense'];
-  return list.find(c=>c.id===id) || list[list.length-1];
-}
-
-function addEntry(){
-  const label  = (document.getElementById('f-label').value||'').trim();
-  const amount = parseFloat(document.getElementById('f-amount').value||'');
-  const date   = document.getElementById('f-date').value || new Date().toISOString().slice(0,10);
-
-  if(!amount||amount<=0){
-    document.getElementById('f-amount').style.borderColor='#FF6B6B';
-    setTimeout(()=>document.getElementById('f-amount').style.borderColor='',1000);
+  if (data.expenses.length === 0) {
+    document.getElementById('insights-content').innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data yet</div><div class="empty-sub">Add some expenses to see insights</div></div>`;
     return;
   }
-  const finalLabel = label || getCat(formType, selectedCat).label;
-  const entry = {id:Date.now(), label:finalLabel, amount, category:selectedCat, date};
 
-  if(formType==='income') data.income.unshift(entry);
-  else data.expenses.unshift(entry);
+  // Group by category
+  const bycat = {};
+  data.expenses.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
+  const sorted = Object.entries(bycat).sort((a, b) => b[1] - a[1]);
+  const maxAmt = sorted[0]?.[1] || 1;
+
+  // Pie chart
+  const colors = sorted.map(([id]) => catInfo('expense', id).color);
+  let pieHTML = buildPie(sorted, totalExpense, colors);
+
+  let html = `
+    <div class="card">
+      <div class="section-title">Spending by Category</div>
+      <div class="pie-wrap">
+        ${pieHTML}
+        <div class="pie-legend">`;
+  sorted.forEach(([id, amt], i) => {
+    const cat = catInfo('expense', id);
+    const pct = totalExpense > 0 ? ((amt / totalExpense) * 100).toFixed(1) : 0;
+    html += `<div class="legend-row"><div class="legend-dot" style="background:${colors[i]}"></div><div class="legend-label">${cat.icon} ${cat.label}</div><div class="legend-pct">${pct}%</div></div>`;
+  });
+  html += `</div></div></div>
+
+    <div class="card">
+      <div class="section-title">Top Expenses</div>`;
+  sorted.forEach(([id, amt]) => {
+    const cat = catInfo('expense', id);
+    const pct = (amt / maxAmt) * 100;
+    html += `<div class="cat-bar-row">
+      <div class="cat-bar-top"><span class="cat-bar-label">${cat.icon} ${cat.label}</span><span class="cat-bar-amount">${fmt(amt)}</span></div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${cat.color};"></div></div>
+    </div>`;
+  });
+  html += `</div>
+
+    <div class="card">
+      <div class="section-title">Summary</div>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="s-label">Income</div><div class="s-val" style="color:var(--green)">${fmt(totalIncome)}</div></div>
+        <div class="summary-item"><div class="s-label">Expenses</div><div class="s-val" style="color:var(--red)">${fmt(totalExpense)}</div></div>
+        <div class="summary-item"><div class="s-label">Net Savings</div><div class="s-val">${fmt(net)}</div></div>
+        <div class="summary-item"><div class="s-label">Savings Rate</div><div class="s-val">${rate}%</div></div>
+      </div>
+    </div>`;
+
+  document.getElementById('insights-content').innerHTML = html;
+}
+
+function buildPie(sorted, total, colors) {
+  if (!sorted.length) return '';
+  const size = 160; const cx = size/2; const cy = size/2; const r = 60; const inner = 35;
+  let angle = -Math.PI / 2;
+  let slices = '';
+  sorted.forEach(([, amt], i) => {
+    const slice = total > 0 ? (amt / total) * Math.PI * 2 : 0;
+    const x1 = cx + r * Math.cos(angle); const y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(angle + slice); const y2 = cy + r * Math.sin(angle + slice);
+    const xi1 = cx + inner * Math.cos(angle); const yi1 = cy + inner * Math.sin(angle);
+    const xi2 = cx + inner * Math.cos(angle + slice); const yi2 = cy + inner * Math.sin(angle + slice);
+    const large = slice > Math.PI ? 1 : 0;
+    slices += `<path d="M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${inner} ${inner} 0 ${large} 0 ${xi1} ${yi1} Z" fill="${colors[i]}" opacity=".9"/>`;
+    angle += slice;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${slices}</svg>`;
+}
+
+/* ── SETTINGS ────────────────────────────────────────────────── */
+function renderSettings() {
+  const dark    = document.body.classList.contains('dark');
+  const entries = data.income.length + data.expenses.length;
+  const name    = localStorage.getItem('spendie-name') || '';
+
+  document.getElementById('settings-content').innerHTML = `
+    <div class="settings-section">
+      <div class="settings-title">Profile</div>
+      <div class="settings-row" onclick="changeName()">
+        <div class="settings-row-left"><div class="settings-row-icon">👤</div><div class="settings-row-info"><div class="s-title">Your Name</div><div class="s-sub">${name || 'Not set'}</div></div></div>
+        <div class="settings-row-right">Edit →</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">Appearance</div>
+      <div class="settings-row" onclick="toggleDark()">
+        <div class="settings-row-left"><div class="settings-row-icon">🌙</div><div class="settings-row-info"><div class="s-title">Dark Mode</div><div class="s-sub">Easy on the eyes</div></div></div>
+        <div class="toggle ${dark ? 'on' : ''}"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">Data</div>
+      <div class="settings-row" onclick="openExportSheet()">
+        <div class="settings-row-left"><div class="settings-row-icon">📤</div><div class="settings-row-info"><div class="s-title">Export Data</div><div class="s-sub">Excel, CSV, JSON, Google Sheets</div></div></div>
+        <div class="settings-row-right">→</div>
+      </div>
+      <div class="settings-row" onclick="document.getElementById('import-file').click()">
+        <div class="settings-row-left"><div class="settings-row-icon">📂</div><div class="settings-row-info"><div class="s-title">Import Backup</div><div class="s-sub">Restore from JSON file</div></div></div>
+        <div class="settings-row-right">→</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">Stats</div>
+      <div class="settings-row">
+        <div class="settings-row-left"><div class="settings-row-icon">🔥</div><div class="settings-row-info"><div class="s-title">Tracking Streak</div><div class="s-sub">Days in a row</div></div></div>
+        <div class="settings-row-right">${data.streak || 0} days</div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-left"><div class="settings-row-icon">📝</div><div class="settings-row-info"><div class="s-title">Total Entries</div><div class="s-sub">All transactions</div></div></div>
+        <div class="settings-row-right">${entries}</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">Danger Zone</div>
+      <div class="settings-row" onclick="clearAllData()">
+        <div class="settings-row-left"><div class="settings-row-icon">🗑️</div><div class="settings-row-info"><div class="s-title">Clear All Data</div><div class="s-sub">This cannot be undone</div></div></div>
+        <div class="settings-row-right danger">Delete</div>
+      </div>
+    </div>
+
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.1</p>`;
+}
+
+function changeName() {
+  const newName = prompt('Enter your name:', localStorage.getItem('spendie-name') || '');
+  if (newName !== null && newName.trim()) {
+    localStorage.setItem('spendie-name', newName.trim());
+    updateGreeting(newName.trim());
+    renderSettings();
+  }
+}
+
+function clearAllData() {
+  if (!confirm('Delete ALL data? This cannot be undone.')) return;
+  data = { income: [], expenses: [], streak: 0, lastTracked: null };
+  saveData();
+  renderPage(currentPage);
+}
+
+/* ── ADD TRANSACTION ─────────────────────────────────────────── */
+function openAddSheet() {
+  document.getElementById('add-overlay').classList.add('visible');
+  document.getElementById('add-sheet').classList.add('visible');
+  document.getElementById('f-date').value = today();
+  setType('expense');
+}
+function closeAddSheet() {
+  document.getElementById('add-overlay').classList.remove('visible');
+  document.getElementById('add-sheet').classList.remove('visible');
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-desc').value = '';
+  selectedCat = '';
+}
+function setType(type) {
+  currentType = type;
+  document.getElementById('btn-expense').className = 'type-btn' + (type==='expense' ? ' active expense' : '');
+  document.getElementById('btn-income').className  = 'type-btn' + (type==='income'  ? ' active income'  : '');
+  selectedCat = '';
+  renderCatGrid();
+}
+function renderCatGrid() {
+  const cats = CATS[currentType];
+  document.getElementById('cat-grid').innerHTML = cats.map(c => `
+    <button class="cat-btn ${selectedCat===c.id?'selected':''}" onclick="selectCat('${c.id}')">
+      <span class="cat-emoji">${c.icon}</span>${c.label}
+    </button>`).join('');
+}
+function selectCat(id) { selectedCat = id; renderCatGrid(); }
+function addTransaction() {
+  const amt  = parseFloat(document.getElementById('f-amount').value);
+  const desc = document.getElementById('f-desc').value.trim();
+  const date = document.getElementById('f-date').value;
+  if (!amt || amt <= 0)   { alert('Please enter a valid amount.'); return; }
+  if (!desc)              { alert('Please add a description.'); return; }
+  if (!selectedCat)       { alert('Please select a category.'); return; }
+  if (!date)              { alert('Please select a date.'); return; }
+
+  const tx = { id: Date.now(), label: desc, amount: amt, category: selectedCat, date };
+  if (currentType === 'income') data.income.push(tx);
+  else data.expenses.push(tx);
 
   updateStreak();
-  save();
+  saveData();
   closeAddSheet();
-  render();
-  showToast('✓ Transaction added!');
+  renderPage(currentPage);
 }
 
-function deleteEntry(type, id){
-  data[type] = data[type].filter(e=>e.id!==id);
-  save();
-  render();
-}
+/* ── EXPORT ──────────────────────────────────────────────────── */
+function openExportSheet()  { document.getElementById('exp-overlay').classList.add('visible'); document.getElementById('exp-sheet').classList.add('visible'); }
+function closeExportSheet() { document.getElementById('exp-overlay').classList.remove('visible'); document.getElementById('exp-sheet').classList.remove('visible'); }
 
-function clearAllData(){
-  if(!confirm('Delete ALL data? This cannot be undone.')) return;
-  data = {income:[], expenses:[], streak:0, lastTracked:null};
-  save();
-  render();
-  showToast('All data cleared');
-}
+function getFilename(ext) { return `spendie-report-${today()}.${ext}`; }
 
-// ── EXPORT ────────────────────────────────────────────────────────
-function openExport(){
-  document.getElementById('exp-sub').textContent =
-    `${data.income.length+data.expenses.length} entries · ${new Date().toLocaleDateString()}`;
-  document.getElementById('export-modal').classList.add('open');
-}
-function closeExport(){ document.getElementById('export-modal').classList.remove('open'); }
-
-function exportExcel(){
-  closeExport();
+function exportExcel() {
   const wb = XLSX.utils.book_new();
-  const ti=totIncome(), te=totExpenses();
-  const wsI = XLSX.utils.aoa_to_sheet([
-    ['Date','Description','Category','Amount (USD)'],
-    ...data.income.map(e=>[e.date,e.label,getCat('income',e.category).label,e.amount]),
-    [],['TOTAL','','',ti]
-  ]);
-  wsI['!cols']=[{wch:12},{wch:32},{wch:18},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,wsI,'Income');
-  const wsE = XLSX.utils.aoa_to_sheet([
-    ['Date','Description','Category','Amount (USD)'],
-    ...data.expenses.map(e=>[e.date,e.label,getCat('expense',e.category).label,e.amount]),
-    [],['TOTAL','','',te]
-  ]);
-  wsE['!cols']=[{wch:12},{wch:32},{wch:18},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,wsE,'Expenses');
-  const catBreak = CATS.expense.map(cat=>{
-    const t=data.expenses.filter(e=>e.category===cat.id).reduce((s,e)=>s+e.amount,0);
-    return t>0?[cat.label,t,te>0?((t/te)*100).toFixed(1)+'%':'0%']:null;
-  }).filter(Boolean);
-  const wsS = XLSX.utils.aoa_to_sheet([
-    ['Spendie Budget Summary'],['Generated',new Date().toLocaleDateString()],[],
-    ['','Amount (USD)'],['Total Income',ti],['Total Expenses',te],['Net Savings',ti-te],[],
-    ['Expense Breakdown'],['Category','Amount','% of Expenses'],...catBreak
-  ]);
-  wsS['!cols']=[{wch:28},{wch:16},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,wsS,'Summary');
-  XLSX.writeFile(wb,`spendie-report-${new Date().toISOString().slice(0,10)}.xlsx`);
-  showToast('✓ Excel downloaded!');
+  const incRows = [['Date','Description','Category','Amount']].concat(data.income.map(t => [t.date, t.label, catInfo('income',t.category).label, t.amount]));
+  const expRows = [['Date','Description','Category','Amount']].concat(data.expenses.map(t => [t.date, t.label, catInfo('expense',t.category).label, t.amount]));
+  const totInc  = data.income.reduce((s,t)=>s+t.amount,0);
+  const totExp  = data.expenses.reduce((s,t)=>s+t.amount,0);
+  const sumRows = [['Metric','Amount'],['Total Income',totInc],['Total Expenses',totExp],['Net Savings',totInc-totExp]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(incRows), 'Income');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(expRows), 'Expenses');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sumRows), 'Summary');
+  XLSX.writeFile(wb, getFilename('xlsx'));
 }
 
-function buildCSV(){
-  const rows=[['Type','Date','Description','Category','Amount (USD)'],
-    ...data.income.map(e=>['Income',e.date,e.label,getCat('income',e.category).label,e.amount]),
-    ...data.expenses.map(e=>['Expense',e.date,e.label,getCat('expense',e.category).label,e.amount])];
-  return rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-}
-function dlBlob(content,name,type){
-  const blob=new Blob([content],{type});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=name;a.click();
-  URL.revokeObjectURL(url);
-}
-function exportCSV(){ closeExport(); dlBlob(buildCSV(),`spendie-${new Date().toISOString().slice(0,10)}.csv`,'text/csv'); showToast('✓ CSV downloaded!'); }
-function exportJSON(){ closeExport(); dlBlob(JSON.stringify(data,null,2),`spendie-backup-${new Date().toISOString().slice(0,10)}.json`,'application/json'); showToast('✓ Backup downloaded!'); }
-function openGoogleSheets(){ closeExport(); dlBlob(buildCSV(),`spendie-${new Date().toISOString().slice(0,10)}.csv`,'text/csv'); setTimeout(()=>window.open('https://sheets.new','_blank'),700); showToast('✓ CSV saved — import in Google Sheets!'); }
-
-function importJSON(){
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-  inp.onchange=e=>{
-    const file=e.target.files[0];if(!file)return;
-    const r=new FileReader();
-    r.onload=ev=>{
-      try{
-        const imported=JSON.parse(ev.target.result);
-        if(imported.income&&imported.expenses){
-          data={...data,...imported};save();render();
-          showToast('✓ Data imported!');
-        } else showToast('⚠️ Invalid backup file');
-      }catch{showToast('⚠️ Could not read file');}
-    };r.readAsText(file);
-  };inp.click();
+function exportCSV() {
+  const rows = [['Type','Date','Description','Category','Amount']];
+  data.income.forEach(t   => rows.push(['Income',  t.date, t.label, catInfo('income',  t.category).label, t.amount]));
+  data.expenses.forEach(t => rows.push(['Expense', t.date, t.label, catInfo('expense', t.category).label, t.amount]));
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = getFilename('csv'); a.click();
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────
-let toastTimer;
-function showToast(msg){
-  const old=document.querySelector('.toast');if(old)old.remove();
-  clearTimeout(toastTimer);
-  const t=document.createElement('div');t.className='toast';t.textContent=msg;
-  document.body.appendChild(t);
-  toastTimer=setTimeout(()=>t.remove(),3000);
+function exportJSON() {
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+  a.download = getFilename('json'); a.click();
 }
 
-// ── INIT ──────────────────────────────────────────────────────────
-updateStreak();
-render();
+function exportGSheets() {
+  exportCSV();
+  setTimeout(() => window.open('https://sheets.new', '_blank'), 500);
+}
+
+function importJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
+      data = imported; saveData(); closeExportSheet(); renderPage(currentPage);
+      alert('✅ Data imported successfully!');
+    } catch { alert('Could not read file.'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ── INIT ────────────────────────────────────────────────────── */
+loadData();
+checkOnboarding();
+initBanner();
+renderHome();
 </script>
 </body>
 </html>
