@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Spendie</title>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
@@ -768,15 +768,15 @@ main {
   <label class="form-label">Amount</label>
   <div class="amount-wrap">
     <span class="amount-prefix">$</span>
-    <input class="form-input amount-input" id="f-amount" type="number" min="0" step="0.01" placeholder="0.00"/>
+    <input class="form-input amount-input" id="f-amount" type="number" min="0" step="0.01" placeholder="0.00" oninput="validateAddBtn()"/>
   </div>
   <label class="form-label">Description</label>
-  <input class="form-input" id="f-desc" type="text" placeholder="What was this for?"/>
+  <input class="form-input" id="f-desc" type="text" placeholder="What was this for?" oninput="validateAddBtn()"/>
   <label class="form-label">Category</label>
   <div class="cat-grid" id="cat-grid"></div>
   <label class="form-label">Date</label>
   <input class="form-input" id="f-date" type="date"/>
-  <button class="add-btn" onclick="addTransaction()">Add Transaction</button>
+  <button class="add-btn" id="add-btn" onclick="addTransaction()" disabled style="opacity:0.5;cursor:not-allowed;">Add Transaction</button>
 </div>
 
 <!-- ── EXPORT SHEET ───────────────────────────────────────── -->
@@ -788,9 +788,9 @@ main {
     <button class="export-btn" onclick="exportExcel()"><span class="e-icon">📊</span>Excel (.xlsx)</button>
     <button class="export-btn" onclick="exportCSV()"><span class="e-icon">📄</span>CSV</button>
     <button class="export-btn" onclick="exportJSON()"><span class="e-icon">💾</span>JSON Backup</button>
-    <button class="export-btn" onclick="exportGSheets()"><span class="e-icon">📋</span>Google Sheets</button>
+    <button class="export-btn" onclick="exportGSheets()"><span class="e-icon">📋</span>CSV for Sheets</button>
   </div>
-  <p style="font-size:12px;color:var(--text3);margin-top:16px;text-align:center;">Files named: spendie-report-YYYY-MM-DD</p>
+  <p style="font-size:12px;color:var(--text3);margin-top:16px;text-align:center;">Files named: spendie-report-YYYY-MM-DD<br/>💡 CSV for Sheets downloads a CSV then opens sheets.new — import it manually.</p>
   <div style="margin-top:16px;">
     <label class="form-label">Import JSON Backup</label>
     <button class="ob-btn-secondary" style="width:100%;margin-top:0;" onclick="document.getElementById('import-file').click()">📂 Choose Backup File</button>
@@ -869,10 +869,10 @@ if (localStorage.getItem('spendie-dark') === '1') document.body.classList.add('d
 
 /* ── STREAK ──────────────────────────────────────────────────── */
 function updateStreak() {
-  const todayStr = new Date().toDateString();
+  const todayStr = new Date().toISOString().split('T')[0];
   if (data.lastTracked === todayStr) return;
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-  const yStr = yesterday.toDateString();
+  const yStr = yesterday.toISOString().split('T')[0];
   if (data.lastTracked === yStr) { data.streak = (data.streak || 0) + 1; }
   else { data.streak = 1; }
   data.lastTracked = todayStr;
@@ -1234,6 +1234,7 @@ function closeAddSheet() {
   document.getElementById('f-amount').value = '';
   document.getElementById('f-desc').value = '';
   selectedCat = '';
+  validateAddBtn();
 }
 function setType(type) {
   currentType = type;
@@ -1249,7 +1250,18 @@ function renderCatGrid() {
       <span class="cat-emoji">${c.icon}</span>${c.label}
     </button>`).join('');
 }
-function selectCat(id) { selectedCat = id; renderCatGrid(); }
+function selectCat(id) { selectedCat = id; renderCatGrid(); validateAddBtn(); }
+
+function validateAddBtn() {
+  const amt  = parseFloat(document.getElementById('f-amount').value);
+  const desc = document.getElementById('f-desc').value.trim();
+  const date = document.getElementById('f-date').value;
+  const btn  = document.getElementById('add-btn');
+  const ready = amt > 0 && desc.length > 0 && selectedCat && date;
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '0.5';
+  btn.style.cursor  = ready ? 'pointer' : 'not-allowed';
+}
 function addTransaction() {
   const amt  = parseFloat(document.getElementById('f-amount').value);
   const desc = document.getElementById('f-desc').value.trim();
