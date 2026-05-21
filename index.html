@@ -602,6 +602,139 @@ main {
 .page.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ── SUCCESS ANIMATION ──────────────────────────────────────── */
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.success-overlay.visible {
+  opacity: 1;
+}
+.success-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  box-shadow: 0 8px 32px rgba(49,198,227,.4);
+  transform: scale(0.5);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.success-overlay.visible .success-circle {
+  transform: scale(1);
+}
+
+/* ── AUTOSAVE TOAST ─────────────────────────────────────────── */
+.save-toast {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--text);
+  color: var(--card);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 300;
+  white-space: nowrap;
+}
+.save-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── INSIGHT CARD ───────────────────────────────────────────── */
+.insight-card {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.insight-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.insight-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.insight-text strong {
+  color: var(--text);
+  font-weight: 700;
+}
+   
+/* ── SEARCH & FILTER ────────────────────────────────────────── */
+.search-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.search-input:focus { border-color: var(--aqua); box-shadow: 0 0 0 3px rgba(49,198,227,.1); }
+.search-input::placeholder { color: var(--text3); }
+.search-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  pointer-events: none;
+}
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.filter-chip {
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .2s;
+  font-family: 'Inter', sans-serif;
+}
+.filter-chip.active {
+  background: var(--gradient);
+  border-color: transparent;
+  color: #fff;
+}
+
 /* ── HIDDEN FILE INPUT ──────────────────────────────────────── */
 #import-file, #ob-import-file { display: none; }
    input, select, textarea {
@@ -709,8 +842,16 @@ main {
 
   </main>
 
-  <!-- FAB -->
-  <button class="fab" onclick="openAddSheet()" title="Add transaction">＋</button>
+<!-- SUCCESS ANIMATION -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-circle">✓</div>
+</div>
+
+<!-- SAVE TOAST -->
+<div class="save-toast" id="save-toast">✓ Saved</div>
+
+<!-- FAB -->
+<button class="fab" onclick="openAddSheet()" title="Add transaction">＋</button>
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
@@ -933,6 +1074,77 @@ function renderPage(page) {
   else if (page === 'settings') renderSettings();
 }
 
+/* ── SUCCESS ANIMATION ──────────────────────────────────────── */
+function showSuccess(callback) {
+  const overlay = document.getElementById('success-overlay');
+  overlay.classList.add('visible');
+  setTimeout(() => {
+    overlay.classList.remove('visible');
+    if (callback) callback();
+  }, 600);
+}
+
+/* ── SAVE TOAST ──────────────────────────────────────────────── */
+let toastTimer = null;
+function showSaveToast() {
+  const toast = document.getElementById('save-toast');
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+
+/* ── SMART INSIGHTS ──────────────────────────────────────────── */
+function getInsights(totalIncome, totalExpense) {
+  const insights = [];
+  const net = totalIncome - totalExpense;
+  const savingsRate = totalIncome > 0 ? (net / totalIncome) * 100 : 0;
+  const spendRate   = totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0;
+
+  // Savings rate messages
+  if (totalIncome > 0 && totalExpense > 0) {
+    if (savingsRate >= 50)
+      insights.push({ icon: '🏆', text: `You're saving <strong>${savingsRate.toFixed(0)}%</strong> of your income. Outstanding!` });
+    else if (savingsRate >= 30)
+      insights.push({ icon: '🎉', text: `You're saving <strong>${savingsRate.toFixed(0)}%</strong> of your income. Great discipline!` });
+    else if (savingsRate >= 10)
+      insights.push({ icon: '👍', text: `You're saving <strong>${savingsRate.toFixed(0)}%</strong> of your income. Keep it up!` });
+    else if (savingsRate > 0)
+      insights.push({ icon: '💡', text: `Savings rate is <strong>${savingsRate.toFixed(0)}%</strong>. Try to aim for 20%+.` });
+  }
+
+  // Overspending warning
+  if (spendRate > 100)
+    insights.push({ icon: '⚠️', text: `You've spent <strong>${fmt(totalExpense - totalIncome)}</strong> more than you earned. Time to cut back.` });
+  else if (spendRate > 85)
+    insights.push({ icon: '🔴', text: `You've used <strong>${spendRate.toFixed(0)}%</strong> of your income. Spending is getting high.` });
+
+  // Top spending category
+  if (data.expenses.length > 0) {
+    const bycat = {};
+    data.expenses.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
+    const top = Object.entries(bycat).sort((a, b) => b[1] - a[1])[0];
+    if (top) {
+      const cat = catInfo('expense', top[0]);
+      const pct = totalExpense > 0 ? ((top[1] / totalExpense) * 100).toFixed(0) : 0;
+      insights.push({ icon: cat.icon, text: `<strong>${cat.label}</strong> is your biggest expense at <strong>${fmt(top[1])}</strong> (${pct}% of spending).` });
+    }
+  }
+
+  // Average daily spend
+  if (data.expenses.length >= 3) {
+    const dates = [...new Set(data.expenses.map(t => t.date))].length;
+    const avgDaily = totalExpense / Math.max(dates, 1);
+    insights.push({ icon: '📅', text: `You spend an average of <strong>${fmt(avgDaily)}</strong> per day.` });
+  }
+
+  // Net savings message
+  if (net > 0 && totalIncome > 0)
+    insights.push({ icon: '💰', text: `You've saved <strong>${fmt(net)}</strong> so far. Well done!` });
+
+  // Return max 2 most relevant insights
+  return insights.slice(0, 2);
+}
+
 /* ── HOME ────────────────────────────────────────────────────── */
 function renderHome() {
   const totalIncome  = data.income.reduce((s, t) => s + t.amount, 0);
@@ -984,6 +1196,17 @@ function renderHome() {
     <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value expense">${fmt(totalExpense)}</div></div>
   </div>`;
 
+  // Smart insights
+  const insights = getInsights(totalIncome, totalExpense);
+  if (insights.length > 0) {
+    insights.forEach(ins => {
+      html += `<div class="insight-card">
+        <div class="insight-icon">${ins.icon}</div>
+        <div class="insight-text">${ins.text}</div>
+      </div>`;
+    });
+  }
+
   html += `<div class="card">
     <div class="section-title">Recent Transactions <span class="see-all" onclick="switchPage('tx',document.querySelector('[data-page=tx]'))">See all</span></div>`;
 
@@ -1000,21 +1223,78 @@ function renderHome() {
 }
 
 /* ── TRANSACTIONS ────────────────────────────────────────────── */
-function renderTransactions() {
-  const all = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
+function renderTransactions(searchTerm = '', filterType = 'all') {
+  let all = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
     .sort((a, b) => b.id - a.id);
 
-  let html = `<div class="section-title" style="margin-bottom:14px;">All Transactions</div>`;
-  if (all.length === 0) {
-    html += `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Start tracking to see your history here</div></div>`;
-  } else {
-    html += `<div class="card">`;
-    all.forEach(t => {
-      const cat = catInfo(t.type, t.category);
-      html += txRow(t, cat, true);
-    });
-    html += `</div>`;
+  // Apply type filter
+  if (filterType === 'income')  all = all.filter(t => t.type === 'income');
+  if (filterType === 'expense') all = all.filter(t => t.type === 'expense');
+
+  // Apply search
+  if (searchTerm.trim()) {
+    const q = searchTerm.toLowerCase();
+    all = all.filter(t =>
+      t.label.toLowerCase().includes(q) ||
+      catInfo(t.type, t.category).label.toLowerCase().includes(q)
+    );
   }
+
+  // Search bar + filter chips
+  let html = `
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input
+        class="search-input"
+        id="tx-search"
+        type="text"
+        placeholder="Search transactions…"
+        value="${searchTerm}"
+        oninput="renderTransactions(this.value, document.querySelector('.filter-chip.active')?.dataset.type || 'all')"
+      />
+    </div>
+    <div class="filter-chips">
+      <button class="filter-chip ${filterType==='all'     ? 'active':''}" data-type="all"
+        onclick="renderTransactions(document.getElementById('tx-search').value, 'all')">All</button>
+      <button class="filter-chip ${filterType==='expense' ? 'active':''}" data-type="expense"
+        onclick="renderTransactions(document.getElementById('tx-search').value, 'expense')">💸 Expenses</button>
+      <button class="filter-chip ${filterType==='income'  ? 'active':''}" data-type="income"
+        onclick="renderTransactions(document.getElementById('tx-search').value, 'income')">💵 Income</button>
+    </div>`;
+
+  if (all.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No results found</div><div class="empty-sub">Try a different search or filter</div></div>`;
+  } else {
+    // Group by date
+    const groups = {};
+    all.forEach(t => {
+      if (!groups[t.date]) groups[t.date] = [];
+      groups[t.date].push(t);
+    });
+
+    function dateLabel(dateStr) {
+      const txDate = new Date(dateStr + 'T12:00:00');
+      const todayD = new Date(); todayD.setHours(12,0,0,0);
+      const yestD  = new Date(); yestD.setDate(yestD.getDate()-1); yestD.setHours(12,0,0,0);
+      if (txDate.toDateString() === todayD.toDateString()) return 'Today';
+      if (txDate.toDateString() === yestD.toDateString()) return 'Yesterday';
+      return txDate.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    }
+
+    Object.keys(groups).forEach(date => {
+      html += `
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;
+          letter-spacing:.6px;margin:16px 0 8px;padding:0 4px;">
+          ${dateLabel(date)}
+        </div>
+        <div class="card" style="margin-bottom:8px;">`;
+      groups[date].forEach(t => {
+        html += txRow(t, catInfo(t.type, t.category), true);
+      });
+      html += `</div>`;
+    });
+  }
+
   document.getElementById('tx-content').innerHTML = html;
 }
 
@@ -1040,6 +1320,7 @@ function deleteTransaction(type, id) {
   const idx = arr.findIndex(t => t.id == id);
   if (idx !== -1) arr.splice(idx, 1);
   saveData();
+  showSaveToast();
   renderPage(currentPage);
 }
 
@@ -1253,8 +1534,11 @@ function addTransaction() {
 
   updateStreak();
   saveData();
-  closeAddSheet();
-  renderPage(currentPage);
+  showSuccess(() => {
+    showSaveToast();
+    closeAddSheet();
+    renderPage(currentPage);
+  });
 }
 
 /* ── EXPORT ──────────────────────────────────────────────────── */
