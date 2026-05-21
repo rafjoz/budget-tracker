@@ -332,7 +332,7 @@ main {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   gap: 3px; padding: 10px 8px;
   background: none; border: none; cursor: pointer;
-  font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 500;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
   color: var(--text3);
   transition: color .2s;
 }
@@ -354,8 +354,12 @@ main {
   cursor: pointer;
   box-shadow: var(--shadow-fab);
   display: flex; align-items: center; justify-content: center;
-  transition: transform .15s, box-shadow .15s;
+  transition: transform .3s cubic-bezier(.32,.72,0,1), box-shadow .15s;
   z-index: 51;
+}
+.fab.open {
+  transform: rotate(45deg);
+  box-shadow: 0 6px 20px rgba(255,107,107,.4);
 }
 .fab:active { transform: scale(.93); }
 
@@ -612,64 +616,34 @@ main {
      ============================================================ -->
 <div id="onboarding">
 
-  <!-- STEP 1: Welcome -->
+  <!-- STEP 1: Welcome + Name (merged) -->
   <div class="ob-step active" id="ob-step-1">
     <div class="ob-logo" style="padding:0;overflow:hidden;">
-  <img src="Icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:24px;"/>
-</div>
+      <img src="Icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:24px;"/>
+    </div>
     <h1 class="ob-title">Welcome to<br/><span style="background:linear-gradient(135deg,#7EE081,#31C6E3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Spendie</span></h1>
     <p class="ob-sub">Track income. Track expenses.<br/><span>Stay in control.</span></p>
-    <button class="ob-btn-primary" onclick="goToStep(2)">Get Started 🚀</button>
-  </div>
-
-  <!-- STEP 2: New or Returning? -->
-  <div class="ob-step" id="ob-step-2">
-    <div class="ob-logo" style="font-size:28px;">👋</div>
-    <h1 class="ob-title">Have you used<br/>Spendie before?</h1>
-    <p class="ob-sub" style="margin-bottom:28px;">Pick an option to continue</p>
-    <div class="ob-choice-grid">
-      <button class="ob-choice-card" onclick="goToStep(4)">
-        <div class="ob-choice-icon green">📂</div>
-        <div class="ob-choice-info">
-          <h3>Import Backup</h3>
-          <p>Restore your data from a JSON backup file</p>
-        </div>
-      </button>
-      <button class="ob-choice-card" onclick="goToStep(3)">
-        <div class="ob-choice-icon blue">✨</div>
-        <div class="ob-choice-info">
-          <h3>I'm New Here</h3>
-          <p>Start fresh and set up your profile</p>
-        </div>
-      </button>
-    </div>
-  </div>
-
-  <!-- STEP 3: Enter Name -->
-  <div class="ob-step" id="ob-step-3">
-    <div class="ob-logo" style="font-size:30px;">😊</div>
-    <h1 class="ob-title">What should<br/>we call you?</h1>
-    <p class="ob-sub" style="margin-bottom:28px;">Your name will appear in the app greeting</p>
     <div class="ob-input-wrap">
-      <input class="ob-input" id="ob-name-input" type="text" placeholder="Enter your name…" maxlength="30" autocomplete="off"/>
+      <input class="ob-input" id="ob-name-input" type="text" placeholder="What should we call you? (optional)" maxlength="30" autocomplete="off"/>
     </div>
-    <button class="ob-btn-primary" onclick="finishOnboarding()">Let's Go! 🎉</button>
-    <button class="ob-btn-secondary" onclick="goToStep(2)">← Back</button>
+    <button class="ob-btn-primary" onclick="finishOnboarding()">Get Started 🚀</button>
+    <p class="ob-import-note" style="margin-top:16px;">
+      Returning user? <a onclick="goToStep(2)">Import your backup →</a>
+    </p>
   </div>
 
-  <!-- STEP 4: Import Backup -->
-  <div class="ob-step" id="ob-step-4">
+  <!-- STEP 2: Import Backup (returning users only) -->
+  <div class="ob-step" id="ob-step-2">
     <div class="ob-logo" style="font-size:28px;">📂</div>
     <h1 class="ob-title">Import<br/>Your Backup</h1>
     <p class="ob-sub" style="margin-bottom:28px;">Select the JSON backup file you exported from Spendie</p>
     <button class="ob-btn-primary" onclick="document.getElementById('ob-import-file').click()">Choose Backup File</button>
     <input type="file" id="ob-import-file" accept=".json" onchange="handleObImport(event)"/>
-    <p class="ob-import-note">Don't have a backup? <a onclick="goToStep(3)">Start fresh instead</a></p>
-    <button class="ob-btn-secondary" onclick="goToStep(2)" style="margin-top:8px;">← Back</button>
+    <p class="ob-import-note">Don't have a backup? <a onclick="goToStep(1)">Start fresh instead</a></p>
+    <button class="ob-btn-secondary" onclick="goToStep(1)" style="margin-top:8px;">← Back</button>
   </div>
 
 </div>
-
 <!-- ============================================================
      APP
      ============================================================ -->
@@ -1226,6 +1200,7 @@ function openAddSheet() {
   document.getElementById('add-overlay').classList.add('visible');
   document.getElementById('add-sheet').classList.add('visible');
   document.getElementById('f-date').value = today();
+  document.querySelector('.fab').classList.add('open');
   setType('expense');
 }
 function closeAddSheet() {
@@ -1233,6 +1208,7 @@ function closeAddSheet() {
   document.getElementById('add-sheet').classList.remove('visible');
   document.getElementById('f-amount').value = '';
   document.getElementById('f-desc').value = '';
+  document.querySelector('.fab').classList.remove('open');
   selectedCat = '';
   validateAddBtn();
 }
