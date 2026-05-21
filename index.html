@@ -1222,6 +1222,19 @@ function renderHome() {
   document.getElementById('home-content').innerHTML = html;
 }
 
+/* ── SEARCH HANDLER ──────────────────────────────────────────── */
+let searchDebounce = null;
+function handleSearch(value) {
+  const filterType = document.querySelector('.filter-chip.active')?.dataset.type || 'all';
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    const pos = document.getElementById('tx-search')?.selectionStart;
+    renderTransactions(value, filterType);
+    const input = document.getElementById('tx-search');
+    if (input) { input.focus(); input.setSelectionRange(pos, pos); }
+  }, 120);
+}
+
 /* ── TRANSACTIONS ────────────────────────────────────────────── */
 function renderTransactions(searchTerm = '', filterType = 'all') {
   let all = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
@@ -1250,7 +1263,7 @@ function renderTransactions(searchTerm = '', filterType = 'all') {
         type="text"
         placeholder="Search transactions…"
         value="${searchTerm}"
-        oninput="renderTransactions(this.value, document.querySelector('.filter-chip.active')?.dataset.type || 'all')"
+        oninput="handleSearch(this.value)"
       />
     </div>
     <div class="filter-chips">
