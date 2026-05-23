@@ -736,6 +736,19 @@ main {
 }
 
 /* ── WORK HOURS ─────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+.clock-pulse-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #34D399;
+  animation: pulse-dot 1.8s ease-in-out infinite;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
 .hours-card {
   background: var(--card);
   border-radius: var(--r-lg);
@@ -1275,8 +1288,10 @@ function handleObImport(e) {
     try {
       const imported = JSON.parse(ev.target.result);
       if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
-      data = imported;
+      data = { income: imported.income, expenses: imported.expenses, streak: imported.streak || 0, lastTracked: imported.lastTracked || null };
       saveData();
+      if (imported.hours) { hoursData = imported.hours; saveHours(); }
+      if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
       // Get name from data or prompt
       const savedName = localStorage.getItem('spendie-name') || '';
       finishOnboarding(savedName || 'there');
@@ -1819,6 +1834,7 @@ function addTransaction() {
 
 // State
 let hoursData = [];
+let hoursCardInterval = null;
 let clockInTime = null;
 let clockTimerInterval = null;
 let pendingClockDuration = 0; // minutes from clock-out
@@ -1833,6 +1849,7 @@ function loadHours() {
     const ci = localStorage.getItem('spendie-clockin');
     if (ci) clockInTime = parseInt(ci);
   } catch(e) { clockInTime = null; }
+  if (clockInTime) startCardRefresh();
 }
 
 function saveHours() {
@@ -1939,6 +1956,7 @@ function handleClockIn() {
   localStorage.setItem('spendie-clockin', clockInTime.toString());
   updateClockUI();
   renderHoursCard();
+  startCardRefresh();
 }
 
 // Clock Out
@@ -2044,7 +2062,7 @@ function renderHoursCard() {
       <div style="background:rgba(49,198,227,.08);border:1.5px solid rgba(49,198,227,.2);
         border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;
         display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;">🟢</span>
+        <span class="clock-pulse-dot"></span>
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--aqua);">Currently clocked in</div>
           <div style="font-size:11px;color:var(--text3);">
@@ -2133,8 +2151,13 @@ function exportCSV() {
 }
 
 function exportJSON() {
+  const exportData = {
+    ...data,
+    hours: hoursData,
+    clockIn: clockInTime ? clockInTime.toString() : null
+  };
   const a = document.createElement('a');
-  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
   a.download = getFilename('json'); a.click();
 }
 
@@ -2150,7 +2173,11 @@ function importJSON(e) {
     try {
       const imported = JSON.parse(ev.target.result);
       if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
-      data = imported; saveData(); closeExportSheet(); renderPage(currentPage);
+      data = { income: imported.income, expenses: imported.expenses, streak: imported.streak || 0, lastTracked: imported.lastTracked || null };
+      saveData();
+      if (imported.hours) { hoursData = imported.hours; saveHours(); }
+      if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
+      closeExportSheet(); renderPage(currentPage); renderHoursCard();
       alert('✅ Data imported successfully!');
     } catch { alert('Could not read file.'); }
   };
@@ -2165,9 +2192,29 @@ initBanner();
 renderHome();
 
 // Refresh hours card every 60s to keep elapsed time current
-setInterval(() => {
-  if (clockInTime) renderHoursCard();
-}, 60000);
+function startCardRefresh() {
+  if (hoursCardInterval) clearInterval(hoursCardInterval);
+  hoursCardInterval = setInterval(() => {
+    if (clockInTime) renderHoursCard();
+    else { clearInterval(hoursCardInterval); hoursCardInterval = null; }
+  }, 60000);
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/budget-tracker/sw.js')
+      .then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              // Optionally show your update banner here
+              console.log('Spendie updated in background');
+            }
+          });
+        });
+      });
+  });
+}
 </script>
 </body>
 </html>
