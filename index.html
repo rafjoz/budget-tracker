@@ -1960,6 +1960,22 @@ function stopTimerDisplay() {
 }
 
 // Clock In
+function startBreak() {
+  if (localStorage.getItem('spendie-breakstart')) return;
+  localStorage.setItem('spendie-breakstart', Date.now().toString());
+  renderHoursCard();
+}
+
+function endBreak() {
+  const bs = localStorage.getItem('spendie-breakstart');
+  if (!bs) return;
+  const breakDuration = (Date.now() - parseInt(bs)) / 60000;
+  const existing = parseFloat(localStorage.getItem('spendie-breaks') || '0');
+  localStorage.setItem('spendie-breaks', (existing + breakDuration).toString());
+  localStorage.removeItem('spendie-breakstart');
+  renderHoursCard();
+}
+
 function handleClockIn() {
   clockInTime = Date.now();
   localStorage.setItem('spendie-clockin', clockInTime.toString());
@@ -1971,7 +1987,23 @@ function handleClockIn() {
 // Clock Out
 function handleClockOut() {
   if (!clockInTime) return;
-  const durationMins = (Date.now() - clockInTime) / 60000;
+
+  // End any active break first
+  const bs = localStorage.getItem('spendie-breakstart');
+  if (bs) {
+    const breakDuration = (Date.now() - parseInt(bs)) / 60000;
+    const existing = parseFloat(localStorage.getItem('spendie-breaks') || '0');
+    localStorage.setItem('spendie-breaks', (existing + breakDuration).toString());
+    localStorage.removeItem('spendie-breakstart');
+  }
+
+  // Subtract breaks from total
+  const totalMins = (Date.now() - clockInTime) / 60000;
+  const breakMins = parseFloat(localStorage.getItem('spendie-breaks') || '0');
+  const durationMins = Math.max(1, totalMins - breakMins);
+
+  // Clear break and clock state
+  localStorage.removeItem('spendie-breaks');
   pendingClockDuration = durationMins;
 
   // Clear clock in state
@@ -2124,17 +2156,32 @@ function renderHoursCard() {
   let clockStatus = '';
   if (clockInTime) {
     const elapsed = (Date.now() - clockInTime) / 60000;
+    const breakMins = parseFloat(localStorage.getItem('spendie-breaks') || '0');
+    const onBreak = !!localStorage.getItem('spendie-breakstart');
+    const netElapsed = Math.max(0, elapsed - breakMins);
     clockStatus = `
       <div style="background:rgba(49,198,227,.08);border:1.5px solid rgba(49,198,227,.2);
-        border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;
-        display:flex;align-items:center;gap:10px;">
-        <span class="clock-pulse-dot"></span>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--aqua);">Currently clocked in</div>
-          <div style="font-size:11px;color:var(--text3);">
-            Since ${fmtTime(clockInTime)} · ${fmtDuration(elapsed)} elapsed
+        border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span class="${onBreak ? '' : 'clock-pulse-dot'}"></span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:${onBreak ? 'var(--yellow)' : 'var(--aqua)'};">
+              ${onBreak ? '⏸ On break' : 'Currently clocked in'}
+            </div>
+            <div style="font-size:11px;color:var(--text3);">
+              Since ${fmtTime(clockInTime)} · ${fmtDuration(netElapsed)} worked
+              ${breakMins > 0 ? ' · ' + fmtDuration(breakMins) + ' break' : ''}
+            </div>
           </div>
         </div>
+        <button onclick="${onBreak ? 'endBreak()' : 'startBreak()'}"
+          style="width:100%;padding:10px;border:none;border-radius:10px;
+          font-family:Poppins,sans-serif;font-size:13px;font-weight:700;cursor:pointer;
+          background:${onBreak ? 'var(--gradient)' : 'rgba(250,204,21,.15)'};
+          color:${onBreak ? '#fff' : '#b45309'};
+          border:1.5px solid ${onBreak ? 'transparent' : 'rgba(250,204,21,.4)'};">
+          ${onBreak ? '▶ End Break' : '⏸ Start Break'}
+        </button>
       </div>`;
   }
 
