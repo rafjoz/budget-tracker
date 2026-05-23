@@ -1480,6 +1480,7 @@ function renderHome() {
   }
   html += `</div>`;
   document.getElementById('home-content').innerHTML = html;
+  renderHoursCard();
 }
 
 /* ── SEARCH HANDLER ──────────────────────────────────────────── */
@@ -2158,9 +2159,15 @@ function importJSON(e) {
 
 /* ── INIT ────────────────────────────────────────────────────── */
 loadData();
+loadHours();
 checkOnboarding();
 initBanner();
 renderHome();
+
+// Refresh hours card every 60s to keep elapsed time current
+setInterval(() => {
+  if (clockInTime) renderHoursCard();
+}, 60000);
 </script>
 </body>
 </html>
