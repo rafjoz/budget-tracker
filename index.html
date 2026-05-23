@@ -1037,6 +1037,11 @@ main {
       <div id="settings-content"></div>
     </div>
 
+    <!-- HOURS PAGE -->
+    <div class="page" id="page-hours">
+      <div id="hours-content"></div>
+    </div>
+
   </main>
 
 <!-- SUCCESS ANIMATION -->
@@ -1060,6 +1065,9 @@ main {
     </button>
     <button class="nav-tab" data-page="insights" onclick="switchPage('insights',this)">
       <span class="tab-icon">📊</span>Insights
+    </button>
+    <button class="nav-tab" data-page="hours" onclick="switchPage('hours',this)">
+      <span class="tab-icon">⏱️</span>Hours
     </button>
     <button class="nav-tab" data-page="settings" onclick="switchPage('settings',this)">
       <span class="tab-icon">⚙️</span>Settings
@@ -1193,8 +1201,8 @@ main {
    Users will see the banner once until they dismiss it.
    Set back to false after the update period is over.
    ──────────────────────────────────────────────────────────── */
-const SHOW_UPDATE_BANNER = true;
-const BANNER_VERSION = 'v2.1'; // Change this with each update
+const SHOW_UPDATE_BANNER = false;
+const BANNER_VERSION = 'v2.3'; // Change this with each update
 
 /* ── CATEGORIES ──────────────────────────────────────────────── */
 const CATS = {
@@ -1344,6 +1352,7 @@ function renderPage(page) {
   if      (page === 'home')     renderHome();
   else if (page === 'tx')       renderTransactions();
   else if (page === 'insights') renderInsights();
+  else if (page === 'hours')    renderHoursPage();
   else if (page === 'settings') renderSettings();
 }
 
@@ -2032,6 +2041,63 @@ function deleteHoursEntry(id) {
   saveHours();
   renderHoursCard();
   showSaveToast();
+}
+
+function renderHoursPage() {
+  const todayStr = today();
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0,0,0,0);
+
+  const todayMins = hoursData.filter(e => e.date === todayStr).reduce((s,e) => s+e.duration, 0);
+  const weekMins  = hoursData.filter(e => new Date(e.date+'T12:00:00') >= weekStart).reduce((s,e) => s+e.duration, 0);
+  const monthMins = hoursData.filter(e => e.date.startsWith(todayStr.slice(0,7))).reduce((s,e) => s+e.duration, 0);
+  const totalMins = hoursData.reduce((s,e) => s+e.duration, 0);
+
+  let html = `
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(todayMins)}</div></div>
+      <div class="stat-card"><div class="stat-label">This Week</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(weekMins)}</div></div>
+      <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(monthMins)}</div></div>
+      <div class="stat-card"><div class="stat-label">All Time</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(totalMins)}</div></div>
+    </div>`;
+
+  if (hoursData.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-title">No hours logged yet</div><div class="empty-sub">Clock in to start tracking</div></div>`;
+  } else {
+    const groups = {};
+    hoursData.forEach(e => {
+      if (!groups[e.date]) groups[e.date] = [];
+      groups[e.date].push(e);
+    });
+    Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(date => {
+      const dayMins = groups[date].reduce((s,e) => s+e.duration, 0);
+      html += `
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;
+          letter-spacing:.6px;margin:16px 0 8px;padding:0 4px;display:flex;justify-content:space-between;">
+          <span>${dateStr(date)}</span>
+          <span style="color:var(--aqua);">${fmtDuration(dayMins)}</span>
+        </div>
+        <div class="card" style="margin-bottom:8px;">`;
+      groups[date].forEach(e => {
+        html += `
+          <div class="hours-entry">
+            <div class="hours-entry-icon">🕐</div>
+            <div class="hours-entry-info">
+              <div class="hours-entry-project">${e.project}</div>
+              <div class="hours-entry-meta">${e.notes || 'No notes'}</div>
+            </div>
+            <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
+            <button class="hours-entry-delete" onclick="deleteHoursEntry(${e.id});renderHoursPage();">🗑️</button>
+          </div>`;
+      });
+      html += `</div>`;
+    });
+  }
+
+  html += `<button class="clock-btn clock-in" style="margin-top:8px;" onclick="openHoursSheet()">▶ Log Hours</button>`;
+  document.getElementById('hours-content').innerHTML = html;
 }
 
 // Render the hours card on Home
