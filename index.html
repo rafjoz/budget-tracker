@@ -1087,7 +1087,7 @@ main {
   </div>
   <label class="form-label">Amount</label>
   <div class="amount-wrap">
-    <span class="amount-prefix">$</span>
+    <span class="amount-prefix" id="amount-prefix">$</span>
     <input class="form-input amount-input" id="f-amount" type="number" min="0" step="0.01" placeholder="0.00" oninput="validateAddBtn()"/>
   </div>
   <label class="form-label">Description</label>
@@ -1203,6 +1203,19 @@ main {
    ──────────────────────────────────────────────────────────── */
 const SHOW_UPDATE_BANNER = false;
 const BANNER_VERSION = 'v2.3'; // Change this with each update
+const CURRENCIES = [
+  { code: 'USD', symbol: '$',  label: 'USD – US Dollar' },
+  { code: 'GBP', symbol: '£',  label: 'GBP – British Pound' },
+  { code: 'EUR', symbol: '€',  label: 'EUR – Euro' },
+  { code: 'PKR', symbol: '₨', label: 'PKR – Pakistani Rupee' },
+  { code: 'AED', symbol: 'AED ', label: 'AED – UAE Dirham' },
+  { code: 'SAR', symbol: 'SAR ', label: 'SAR – Saudi Riyal' },
+];
+
+function getCurrency() {
+  const code = localStorage.getItem('spendie-currency') || 'USD';
+  return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
+}
 
 /* ── CATEGORIES ──────────────────────────────────────────────── */
 const CATS = {
@@ -1244,7 +1257,8 @@ function saveData() {
   localStorage.setItem('spendie-data', JSON.stringify(data));
 }
 function fmt(n) {
-  return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const sym = getCurrency().symbol;
+  return sym + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function dateStr(d) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
@@ -1716,6 +1730,14 @@ function renderSettings() {
     </div>
 
     <div class="settings-section">
+      <div class="settings-title">Currency</div>
+      <div class="settings-row" onclick="changeCurrency()">
+        <div class="settings-row-left"><div class="settings-row-icon">💱</div><div class="settings-row-info"><div class="s-title">Currency</div><div class="s-sub">${getCurrency().label}</div></div></div>
+        <div class="settings-row-right">${getCurrency().symbol} →</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <div class="settings-title">Appearance</div>
       <div class="settings-row" onclick="toggleDark()">
         <div class="settings-row-left"><div class="settings-row-icon">🌙</div><div class="settings-row-info"><div class="s-title">Dark Mode</div><div class="s-sub">Easy on the eyes</div></div></div>
@@ -1767,6 +1789,19 @@ function changeName() {
   }
 }
 
+function changeCurrency() {
+  const current = getCurrency().code;
+  const options = CURRENCIES.map(c => `${c.code} – ${c.symbol}`).join('\n');
+  const choice = prompt(`Choose currency:\n\n${CURRENCIES.map((c,i) => `${i+1}. ${c.label}`).join('\n')}\n\nEnter number (1-${CURRENCIES.length}):`);
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (idx >= 0 && idx < CURRENCIES.length) {
+    localStorage.setItem('spendie-currency', CURRENCIES[idx].code);
+    renderSettings();
+    renderPage(currentPage);
+  }
+}
+
 function clearAllData() {
   if (!confirm('Delete ALL data? This cannot be undone.')) return;
   data = { income: [], expenses: [], streak: 0, lastTracked: null };
@@ -1781,7 +1816,9 @@ function openAddSheet() {
   document.getElementById('f-date').value = today();
   document.querySelector('.fab').classList.add('open');
   setType('expense');
+  document.getElementById('amount-prefix').textContent = getCurrency().symbol; // ← ADD THIS
 }
+
 function closeAddSheet() {
   document.getElementById('add-overlay').classList.remove('visible');
   document.getElementById('add-sheet').classList.remove('visible');
@@ -1979,6 +2016,7 @@ function endBreak() {
 function handleClockIn() {
   clockInTime = Date.now();
   localStorage.setItem('spendie-clockin', clockInTime.toString());
+  localStorage.setItem('spendie-clockin-date', today());
   updateClockUI();
   renderHoursCard();
   startCardRefresh();
@@ -2009,6 +2047,7 @@ function handleClockOut() {
   // Clear clock in state
   clockInTime = null;
   localStorage.removeItem('spendie-clockin');
+  localStorage.removeItem('spendie-clockin-date');
 
   // Update UI — hide clock buttons, show summary + form for project/notes
   document.getElementById('clock-in-btn').style.display  = 'none';
@@ -2034,7 +2073,9 @@ function handleClockOut() {
 function saveHoursEntry() {
   const project  = document.getElementById('h-project').value.trim() || 'Work';
   const notes    = document.getElementById('h-notes').value.trim();
-  const dateVal  = document.getElementById('h-date').value || today();
+  const dateVal = pendingClockDuration > 0
+    ? (localStorage.getItem('spendie-clockin-date') || today())
+    : (document.getElementById('h-date').value || today());
   let durationMins = 0;
 
   if (pendingClockDuration > 0) {
