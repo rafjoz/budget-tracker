@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v2.4
+   SPENDIE v2.5
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -233,37 +233,6 @@ body {
   margin-top: 10px;
 }
 .ob-import-note a { color: var(--aqua); cursor: pointer; text-decoration: none; }
-
-/* ============================================================
-   UPDATE BANNER
-   ============================================================ */
-#update-banner {
-  display: none; /* Shown via JS when SHOW_UPDATE_BANNER = true */
-  background: linear-gradient(135deg, rgba(126,224,129,.15), rgba(49,198,227,.12));
-  border-bottom: 1.5px solid rgba(49,198,227,.25);
-  padding: 10px 16px;
-  font-size: 13px;
-  color: var(--text);
-  align-items: center;
-  gap: 10px;
-}
-#update-banner.visible { display: flex; }
-.banner-icon { font-size: 18px; flex-shrink: 0; }
-.banner-text { flex: 1; line-height: 1.4; }
-.banner-text strong { color: var(--aqua); font-weight: 600; }
-.banner-btns { display: flex; gap: 8px; flex-shrink: 0; }
-.banner-btn {
-  padding: 6px 12px;
-  border-radius: var(--r-pill);
-  font-size: 12px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: transform .15s;
-}
-.banner-btn:active { transform: scale(.96); }
-.banner-btn.primary { background: var(--gradient); color: #fff; }
-.banner-btn.ghost { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
 
 /* ============================================================
    APP SHELL
@@ -979,18 +948,6 @@ main {
      ============================================================ -->
 <div id="app">
 
-  <!-- UPDATE BANNER -->
-  <div id="update-banner">
-    <span class="banner-icon">🔔</span>
-    <div class="banner-text">
-      <strong>Spendie has been updated!</strong> Please export a backup before refreshing to keep your data safe.
-    </div>
-    <div class="banner-btns">
-      <button class="banner-btn primary" onclick="openExportSheet()">Backup</button>
-      <button class="banner-btn ghost" onclick="dismissBanner()">✕</button>
-    </div>
-  </div>
-
   <!-- HEADER -->
   <header>
     <div class="header-left">
@@ -1201,8 +1158,6 @@ main {
    Users will see the banner once until they dismiss it.
    Set back to false after the update period is over.
    ──────────────────────────────────────────────────────────── */
-const SHOW_UPDATE_BANNER = false;
-const BANNER_VERSION = 'v2.4'; // Change this with each update
 const CURRENCIES = [
   { code: 'USD', symbol: '$',  label: 'USD – US Dollar' },
   { code: 'GBP', symbol: '£',  label: 'GBP – British Pound' },
@@ -1251,12 +1206,21 @@ let currentPage = 'home';
 function loadData() {
   try {
     const raw = localStorage.getItem('spendie-data');
-    if (raw) data = JSON.parse(raw);
-  } catch(e) {}
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Silent migration: ensure all required fields exist
+      data = {
+        income: parsed.income || [],
+        expenses: parsed.expenses || [],
+        streak: parsed.streak || 0,
+        lastTracked: parsed.lastTracked || null,
+      };
+    }
+  } catch(e) { data = { income: [], expenses: [], streak: 0, lastTracked: null }; }
   try {
     const rb = localStorage.getItem('spendie-budgets');
     if (rb) budgets = JSON.parse(rb);
-  } catch(e) {}
+  } catch(e) { budgets = {}; }
 }
 function saveData() {
   localStorage.setItem('spendie-data', JSON.stringify(data));
@@ -1345,19 +1309,6 @@ function checkOnboarding() {
     const name = localStorage.getItem('spendie-name') || '';
     updateGreeting(name);
   }
-}
-
-/* ── UPDATE BANNER ───────────────────────────────────────────── */
-function initBanner() {
-  if (!SHOW_UPDATE_BANNER) return;
-  const dismissed = localStorage.getItem('spendie-banner-dismissed');
-  if (dismissed === BANNER_VERSION) return;
-  document.getElementById('update-banner').classList.add('visible');
-}
-
-function dismissBanner() {
-  localStorage.setItem('spendie-banner-dismissed', BANNER_VERSION);
-  document.getElementById('update-banner').classList.remove('visible');
 }
 
 /* ── PAGE SWITCHING ──────────────────────────────────────────── */
@@ -1658,12 +1609,17 @@ function txRow(t, cat, showDelete = false) {
   const sign = t.type === 'income' ? '+' : '-';
   const cls  = t.type === 'income' ? 'income' : 'expense';
   const del  = showDelete ? `<button class="tx-delete" onclick="deleteTransaction('${t.type}',${t.id})">🗑️</button>` : '';
+  const rate = parseFloat(localStorage.getItem('spendie-rate') || '0');
+  const workHours = (rate > 0 && t.type === 'expense')
+    ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;">= ${(t.amount / rate).toFixed(1)} hrs of work</div>`
+    : '';
   return `
   <div class="tx-row">
     <div class="tx-icon" style="background:${cat.color}22;">${cat.icon}</div>
     <div class="tx-info">
       <div class="tx-label">${t.label || 'Untitled'}</div>
       <div class="tx-meta">${cat.label} · ${dateStr(t.date)}</div>
+      ${workHours}
     </div>
     <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
     ${del}
@@ -1794,6 +1750,14 @@ function renderSettings() {
     </div>
 
 <div class="settings-section">
+      <div class="settings-title">Work</div>
+      <div class="settings-row" onclick="changeHourlyRate()">
+        <div class="settings-row-left"><div class="settings-row-icon">⏱️</div><div class="settings-row-info"><div class="s-title">Hourly Rate</div><div class="s-sub">${localStorage.getItem('spendie-rate') ? fmt(parseFloat(localStorage.getItem('spendie-rate'))) + '/hr' : 'Not set — used to show cost in work hours'}</div></div></div>
+        <div class="settings-row-right">Edit →</div>
+      </div>
+    </div>
+
+<div class="settings-section">
       <div class="settings-title">Budgets</div>
       <div class="settings-row" onclick="manageBudgets()">
         <div class="settings-row-left"><div class="settings-row-icon">🎯</div><div class="settings-row-info"><div class="s-title">Category Budgets</div><div class="s-sub">${Object.keys(budgets).length > 0 ? Object.keys(budgets).length + ' budget(s) set' : 'Set monthly limits per category'}</div></div></div>
@@ -1849,7 +1813,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.4</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.5</p>`;
 }
 
 function changeName() {
@@ -1872,6 +1836,18 @@ function changeCurrency() {
     renderSettings();
     renderPage(currentPage);
   }
+}
+function changeHourlyRate() {
+  const current = localStorage.getItem('spendie-rate') || '';
+  const val = prompt('Your hourly rate (enter 0 to remove):', current);
+  if (val === null) return;
+  const num = parseFloat(val);
+  if (!num || num <= 0) {
+    localStorage.removeItem('spendie-rate');
+  } else {
+    localStorage.setItem('spendie-rate', num.toString());
+  }
+  renderSettings();
 }
 function manageBudgets() {
   const cats = CATS.expense;
@@ -2220,13 +2196,32 @@ function renderHoursPage() {
   const monthMins = hoursData.filter(e => e.date.startsWith(todayStr.slice(0,7))).reduce((s,e) => s+e.duration, 0);
   const totalMins = hoursData.reduce((s,e) => s+e.duration, 0);
 
+  const hourlyRate = parseFloat(localStorage.getItem('spendie-rate') || '0');
+  const monthEarnings = hourlyRate > 0 ? (monthMins / 60) * hourlyRate : 0;
+  const weekEarnings  = hourlyRate > 0 ? (weekMins  / 60) * hourlyRate : 0;
+
   let html = `
     <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
       <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(todayMins)}</div></div>
       <div class="stat-card"><div class="stat-label">This Week</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(weekMins)}</div></div>
       <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(monthMins)}</div></div>
       <div class="stat-card"><div class="stat-label">All Time</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(totalMins)}</div></div>
-    </div>`;
+    </div>
+    ${hourlyRate > 0 ? `
+    <div class="card" style="background:var(--gradient);border:none;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💰 Estimated Earnings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-family:Poppins,sans-serif;font-size:20px;font-weight:800;color:#fff;">${fmt(weekEarnings)}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px;">This Week</div>
+        </div>
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-family:Poppins,sans-serif;font-size:20px;font-weight:800;color:#fff;">${fmt(monthEarnings)}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px;">This Month</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:10px;text-align:center;">Based on ${fmt(hourlyRate)}/hr · Set in Settings → Work</div>
+    </div>` : ''}`;
 
   if (hoursData.length === 0) {
     html += `
@@ -2444,7 +2439,6 @@ function importJSON(e) {
 loadData();
 loadHours();
 checkOnboarding();
-initBanner();
 renderHome();
 
 // Refresh hours card every 60s to keep elapsed time current
