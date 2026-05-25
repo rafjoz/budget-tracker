@@ -1610,7 +1610,16 @@ function renderTransactions(searchTerm = '', filterType = 'all') {
     </div>`;
 
   if (all.length === 0) {
-    html += `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No results found</div><div class="empty-sub">Try a different search or filter</div></div>`;
+    const isSearching = searchTerm.trim() || filterType !== 'all';
+    html += `
+      <div class="empty-state" style="padding:60px 20px;">
+        <div style="font-size:64px;margin-bottom:16px;">${isSearching ? '🔍' : '💸'}</div>
+        <div class="empty-title">${isSearching ? 'No results found' : 'No transactions yet'}</div>
+        <div class="empty-sub" style="margin-bottom:24px;line-height:1.6;">
+          ${isSearching ? 'Try a different search term or clear the filter.' : 'Tap the + button to add your first income or expense.'}
+        </div>
+        ${!isSearching ? `<button onclick="openAddSheet()" style="padding:14px 28px;background:var(--gradient);border:none;border-radius:var(--r-btn);font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:var(--shadow-fab);">＋ Add Transaction</button>` : ''}
+      </div>`;
   } else {
     // Group by date
     const groups = {};
@@ -1679,7 +1688,17 @@ function renderInsights() {
   const rate = totalIncome > 0 ? ((net / totalIncome) * 100).toFixed(1) : 0;
 
   if (data.expenses.length === 0) {
-    document.getElementById('insights-content').innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No data yet</div><div class="empty-sub">Add some expenses to see insights</div></div>`;
+    document.getElementById('insights-content').innerHTML = `
+      <div class="empty-state" style="padding:60px 20px;">
+        <div style="font-size:64px;margin-bottom:16px;">📊</div>
+        <div class="empty-title">No insights yet</div>
+        <div class="empty-sub" style="margin-bottom:24px;max-width:260px;margin-left:auto;margin-right:auto;line-height:1.6;">
+          Add your first expense and Spendie will show you spending breakdowns, trends, and savings tips.
+        </div>
+        <button onclick="openAddSheet()" style="padding:14px 28px;background:var(--gradient);border:none;border-radius:var(--r-btn);font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:var(--shadow-fab);">
+          ＋ Add First Expense
+        </button>
+      </div>`;
     return;
   }
 
@@ -2210,7 +2229,17 @@ function renderHoursPage() {
     </div>`;
 
   if (hoursData.length === 0) {
-    html += `<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-title">No hours logged yet</div><div class="empty-sub">Clock in to start tracking</div></div>`;
+    html += `
+      <div class="empty-state" style="padding:60px 20px;">
+        <div style="font-size:64px;margin-bottom:16px;">⏱️</div>
+        <div class="empty-title">No hours logged yet</div>
+        <div class="empty-sub" style="margin-bottom:24px;line-height:1.6;">
+          Clock in when you start working and Spendie will track your time automatically.
+        </div>
+        <button onclick="openHoursSheet()" style="padding:14px 28px;background:var(--gradient);border:none;border-radius:var(--r-btn);font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:var(--shadow-fab);">
+          ▶ Clock In Now
+        </button>
+      </div>`;
   } else {
     const groups = {};
     hoursData.forEach(e => {
