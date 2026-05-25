@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v2.3
+   SPENDIE v2.4
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -1202,7 +1202,7 @@ main {
    Set back to false after the update period is over.
    ──────────────────────────────────────────────────────────── */
 const SHOW_UPDATE_BANNER = false;
-const BANNER_VERSION = 'v2.3'; // Change this with each update
+const BANNER_VERSION = 'v2.4'; // Change this with each update
 const CURRENCIES = [
   { code: 'USD', symbol: '$',  label: 'USD – US Dollar' },
   { code: 'GBP', symbol: '£',  label: 'GBP – British Pound' },
@@ -1243,6 +1243,7 @@ const CATS = {
 
 /* ── DATA ────────────────────────────────────────────────────── */
 let data = { income: [], expenses: [], streak: 0, lastTracked: null };
+let budgets = {};
 let currentType = 'expense';
 let selectedCat = '';
 let currentPage = 'home';
@@ -1252,9 +1253,16 @@ function loadData() {
     const raw = localStorage.getItem('spendie-data');
     if (raw) data = JSON.parse(raw);
   } catch(e) {}
+  try {
+    const rb = localStorage.getItem('spendie-budgets');
+    if (rb) budgets = JSON.parse(rb);
+  } catch(e) {}
 }
 function saveData() {
   localStorage.setItem('spendie-data', JSON.stringify(data));
+}
+function saveBudgets() {
+  localStorage.setItem('spendie-budgets', JSON.stringify(budgets));
 }
 function fmt(n) {
   const sym = getCurrency().symbol;
@@ -1504,7 +1512,34 @@ function renderHome() {
       </div>`;
     });
   }
-
+// Budget progress bars
+  const budgetCats = Object.keys(budgets);
+  if (budgetCats.length > 0) {
+    html += `<div class="card"><div class="section-title">Monthly Budgets</div>`;
+    const currentMonth = today().slice(0, 7);
+    budgetCats.forEach(catId => {
+      const cat = catInfo('expense', catId);
+      const limit = budgets[catId];
+      const spent = data.expenses
+        .filter(t => t.category === catId && t.date.startsWith(currentMonth))
+        .reduce((s, t) => s + t.amount, 0);
+      const pct = Math.min((spent / limit) * 100, 100);
+      const color = pct >= 90 ? 'var(--red)' : pct >= 75 ? 'var(--yellow)' : 'var(--green)';
+      const label = pct >= 90 ? '🔴' : pct >= 75 ? '⚠️' : '✅';
+      html += `
+        <div class="cat-bar-row" style="margin-bottom:14px;">
+          <div class="cat-bar-top">
+            <span class="cat-bar-label">${cat.icon} ${cat.label} ${label}</span>
+            <span class="cat-bar-amount">${fmt(spent)} / ${fmt(limit)}</span>
+          </div>
+          <div class="cat-bar-track" style="height:8px;">
+            <div class="cat-bar-fill" style="width:${pct}%;background:${color};transition:width .6s ease;"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">${pct.toFixed(0)}% used · ${fmt(Math.max(limit - spent, 0))} remaining</div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
   html += `<div class="card">
     <div class="section-title">Recent Transactions <span class="see-all" onclick="switchPage('tx',document.querySelector('[data-page=tx]'))">See all</span></div>`;
 
@@ -1673,12 +1708,22 @@ function renderInsights() {
 
     <div class="card">
       <div class="section-title">Top Expenses</div>`;
+  const currentMonth = today().slice(0, 7);
   sorted.forEach(([id, amt]) => {
     const cat = catInfo('expense', id);
     const pct = (amt / maxAmt) * 100;
+    const hasBudget = budgets[id];
+    const budgetPct = hasBudget ? Math.min((amt / hasBudget) * 100, 100) : null;
+    const budgetColor = budgetPct >= 90 ? 'var(--red)' : budgetPct >= 75 ? 'var(--yellow)' : 'var(--green)';
+    const budgetLabel = hasBudget
+      ? `<span style="font-size:11px;color:${budgetColor};font-weight:600;margin-left:6px;">${budgetPct.toFixed(0)}% of ${fmt(hasBudget)} budget</span>`
+      : '';
     html += `<div class="cat-bar-row">
-      <div class="cat-bar-top"><span class="cat-bar-label">${cat.icon} ${cat.label}</span><span class="cat-bar-amount">${fmt(amt)}</span></div>
-      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${cat.color};"></div></div>
+      <div class="cat-bar-top">
+        <span class="cat-bar-label">${cat.icon} ${cat.label}${budgetLabel}</span>
+        <span class="cat-bar-amount">${fmt(amt)}</span>
+      </div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${hasBudget ? budgetColor : cat.color};"></div></div>
     </div>`;
   });
   html += `</div>
@@ -1726,6 +1771,14 @@ function renderSettings() {
       <div class="settings-row" onclick="changeName()">
         <div class="settings-row-left"><div class="settings-row-icon">👤</div><div class="settings-row-info"><div class="s-title">Your Name</div><div class="s-sub">${name || 'Not set'}</div></div></div>
         <div class="settings-row-right">Edit →</div>
+      </div>
+    </div>
+
+<div class="settings-section">
+      <div class="settings-title">Budgets</div>
+      <div class="settings-row" onclick="manageBudgets()">
+        <div class="settings-row-left"><div class="settings-row-icon">🎯</div><div class="settings-row-info"><div class="s-title">Category Budgets</div><div class="s-sub">${Object.keys(budgets).length > 0 ? Object.keys(budgets).length + ' budget(s) set' : 'Set monthly limits per category'}</div></div></div>
+        <div class="settings-row-right">Manage →</div>
       </div>
     </div>
 
@@ -1777,7 +1830,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.3</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.4</p>`;
 }
 
 function changeName() {
@@ -1800,6 +1853,26 @@ function changeCurrency() {
     renderSettings();
     renderPage(currentPage);
   }
+}
+function manageBudgets() {
+  const cats = CATS.expense;
+  const lines = cats.map((c, i) => `${i+1}. ${c.icon} ${c.label} — current: ${budgets[c.id] ? fmt(budgets[c.id]) : 'none'}`).join('\n');
+  const choice = prompt(`Which category to set a budget for?\n\n${lines}\n\nEnter number (1-${cats.length}):`);
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (idx < 0 || idx >= cats.length) return;
+  const cat = cats[idx];
+  const current = budgets[cat.id] || '';
+  const val = prompt(`Monthly budget for ${cat.icon} ${cat.label}:\n(Enter 0 or leave blank to remove)`, current);
+  if (val === null) return;
+  const num = parseFloat(val);
+  if (!num || num <= 0) {
+    delete budgets[cat.id];
+  } else {
+    budgets[cat.id] = num;
+  }
+  saveBudgets();
+  renderSettings();
 }
 
 function clearAllData() {
