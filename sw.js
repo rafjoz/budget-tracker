@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spendie-v2.2';
+const CACHE_NAME = 'spendie-v2.5';
 const ASSETS = [
   '/budget-tracker/',
   '/budget-tracker/index.html',
