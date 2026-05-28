@@ -244,26 +244,30 @@ header {
   position: sticky; top: 0; z-index: 100;
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  padding: 12px 20px env(safe-area-inset-top, 0);
+  padding: 14px 20px env(safe-area-inset-top, 0);
   display: flex; align-items: center; justify-content: space-between;
   box-shadow: var(--shadow-sm);
+  min-height: 64px;
 }
 .header-left { display: flex; flex-direction: column; gap: 1px; }
 .header-logo { height: 36px; }
 
 /* Greeting text under logo */
 #header-greeting {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text2);
-  display: none; /* shown when name is set */
+  display: none;
+  margin-top: 2px;
+  letter-spacing: 0.1px;
 }
 #header-greeting.visible { display: block; }
 #header-greeting .hi-name {
   background: var(--gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .header-actions { display: flex; gap: 8px; align-items: center; }
@@ -950,9 +954,15 @@ main {
 
   <!-- HEADER -->
   <header>
-    <div class="header-left">
-      <!-- Inline SVG logo (wallet + gradient) -->
-      <img class="header-logo" src="Logo.png" style="height:36px;object-fit:contain;"/>
+  <div class="header-left">
+    <img class="header-logo" src="Logo.png" style="height:44px;object-fit:contain;"/>
+    <div id="header-greeting"></div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="toggleDark()" title="Toggle dark mode" style="background:var(--bg2);border-radius:12px;width:40px;height:40px;font-size:18px;">🌙</button>
+    <button class="icon-btn" onclick="openExportSheet()" title="Export" style="background:var(--bg2);border-radius:12px;width:40px;height:40px;font-size:18px;">📤</button>
+  </div>
+</header>
         <defs>
           <linearGradient id="lg" x1="0" y1="0" x2="120" y2="36" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stop-color="#7EE081"/>
