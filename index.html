@@ -351,32 +351,90 @@ main {
 .hero-card {
   background: var(--gradient);
   border: none;
-  padding: 24px 22px;
+  padding: 26px 24px 22px;
   position: relative;
   overflow: hidden;
+  border-radius: 24px;
 }
 .hero-card::before {
   content: '';
   position: absolute;
-  top: -30px; right: -30px;
-  width: 120px; height: 120px;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
   border-radius: 50%;
-  background: rgba(255,255,255,.1);
+  background: rgba(255,255,255,.12);
 }
 .hero-card::after {
   content: '';
   position: absolute;
-  bottom: -20px; left: 30px;
-  width: 80px; height: 80px;
+  bottom: -30px; left: -20px;
+  width: 130px; height: 130px;
   border-radius: 50%;
-  background: rgba(255,255,255,.07);
+  background: rgba(255,255,255,.08);
 }
-.hero-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.8); margin-bottom: 6px; }
+.hero-month {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.hero-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,.85);
+  margin-bottom: 4px;
+}
 .hero-balance {
   font-family: 'Poppins', sans-serif;
-  font-size: 40px; font-weight: 800;
+  font-size: 46px;
+  font-weight: 800;
   color: #fff;
   line-height: 1.1;
+  letter-spacing: -1px;
+  position: relative;
+  z-index: 1;
+}
+.hero-divider {
+  height: 1px;
+  background: rgba(255,255,255,.2);
+  margin: 20px 0 16px;
+}
+.hero-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  z-index: 1;
+}
+.hero-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-stat-icon { font-size: 18px; }
+.hero-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,.7);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 2px;
+}
+.hero-stat-val {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.hero-stat-sep {
+  width: 1px;
+  height: 36px;
+  background: rgba(255,255,255,.25);
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 .balance-chips { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 .chip {
@@ -1430,12 +1488,34 @@ function renderHome() {
 
   let html = `
     <div class="card hero-card">
+      <div class="hero-month">${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</div>
       <div class="hero-label">Total Balance</div>
       <div class="hero-balance">${fmt(balance)}</div>
-     <div class="balance-chips">
-        <div class="chip">⬆️ ${fmt(totalIncome)}</div>
-        <div class="chip">⬇️ ${fmt(totalExpense)}</div>
-        <div class="chip">💚 ${fmt(saved > 0 ? saved : 0)}</div>
+      <div class="hero-divider"></div>
+      <div class="hero-stats-row">
+        <div class="hero-stat">
+          <div class="hero-stat-icon">⬆️</div>
+          <div class="hero-stat-info">
+            <div class="hero-stat-label">Income</div>
+            <div class="hero-stat-val">${fmt(totalIncome)}</div>
+          </div>
+        </div>
+        <div class="hero-stat-sep"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-icon">⬇️</div>
+          <div class="hero-stat-info">
+            <div class="hero-stat-label">Expenses</div>
+            <div class="hero-stat-val">${fmt(totalExpense)}</div>
+          </div>
+        </div>
+        <div class="hero-stat-sep"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-icon">💚</div>
+          <div class="hero-stat-info">
+            <div class="hero-stat-label">Saved</div>
+            <div class="hero-stat-val">${fmt(saved > 0 ? saved : 0)}</div>
+          </div>
+        </div>
       </div>
     </div>
 
