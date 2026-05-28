@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spendie-v2.5';
+const CACHE_NAME = 'spendie-v2.6';
 const ASSETS = [
   '/budget-tracker/',
   '/budget-tracker/index.html',
@@ -39,4 +39,9 @@ self.addEventListener('fetch', e => {
       }).catch(() => cached); // fallback to cache if fetch fails
     })
   );
+});
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

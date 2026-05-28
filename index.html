@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v2.5
+   SPENDIE v2.6
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -288,7 +288,7 @@ header {
 main {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+  padding: 22px 18px calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── BOTTOM NAV ─────────────────────────────────────────────── */
@@ -343,7 +343,7 @@ main {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   padding: 20px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 .card-sm { border-radius: var(--r-sm); box-shadow: var(--shadow-sm); }
 
@@ -1021,23 +1021,6 @@ main {
     <button class="icon-btn" onclick="openExportSheet()" title="Export" style="background:var(--bg2);border-radius:12px;width:40px;height:40px;font-size:18px;">📤</button>
   </div>
 </header>
-        <defs>
-          <linearGradient id="lg" x1="0" y1="0" x2="120" y2="36" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7EE081"/>
-            <stop offset="100%" stop-color="#31C6E3"/>
-          </linearGradient>
-        </defs>
-        <rect x="0" y="4" width="28" height="28" rx="8" fill="url(#lg)"/>
-        <text x="5" y="24" font-size="18" font-family="Arial">💰</text>
-        <text x="36" y="26" font-family="Poppins,sans-serif" font-weight="800" font-size="22" fill="url(#lg)">Spendie</text>
-      </svg>
-      <div id="header-greeting"></div>
-    </div>
-    <div class="header-actions">
-      <button class="icon-btn" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
-      <button class="icon-btn" onclick="openExportSheet()" title="Export">📤</button>
-    </div>
-  </header>
 
   <!-- MAIN -->
   <main>
@@ -1881,6 +1864,10 @@ function renderSettings() {
 
     <div class="settings-section">
       <div class="settings-title">Data</div>
+      <div class="settings-row" onclick="checkForUpdates()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔄</div><div class="settings-row-info"><div class="s-title">Check for Updates</div><div class="s-sub" id="update-status-text">Tap to check for latest version</div></div></div>
+        <div class="settings-row-right" id="update-status-arrow">→</div>
+      </div>
       <div class="settings-row" onclick="openExportSheet()">
         <div class="settings-row-left"><div class="settings-row-icon">📤</div><div class="settings-row-info"><div class="s-title">Export Data</div><div class="s-sub">Excel, CSV, JSON, Google Sheets</div></div></div>
         <div class="settings-row-right">→</div>
@@ -1911,7 +1898,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.5</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.6</p>`;
 }
 
 function changeName() {
@@ -2564,6 +2551,59 @@ if ('serviceWorker' in navigator) {
           });
         });
       });
+  });
+}
+function checkForUpdates() {
+  const statusText  = document.getElementById('update-status-text');
+  const statusArrow = document.getElementById('update-status-arrow');
+  if (!statusText) return;
+
+  if (!('serviceWorker' in navigator)) {
+    statusText.textContent = 'Updates not supported on this browser';
+    return;
+  }
+
+  statusText.textContent = 'Checking…';
+  statusArrow.textContent = '⏳';
+
+  navigator.serviceWorker.getRegistration('/budget-tracker/sw.js').then(reg => {
+    if (!reg) {
+      statusText.textContent = 'Service worker not found';
+      statusArrow.textContent = '→';
+      return;
+    }
+
+    reg.update().then(() => {
+      const waiting  = reg.waiting;
+      const installing = reg.installing;
+
+      if (waiting || installing) {
+        statusText.textContent = '✅ Update found! Tap to apply';
+        statusArrow.textContent = '🔄';
+        // Replace the row's onclick to apply the update
+        const row = statusText.closest('.settings-row');
+        if (row) {
+          row.onclick = () => {
+            const worker = waiting || installing;
+            worker.postMessage({ type: 'SKIP_WAITING' });
+            statusText.textContent = 'Applying update…';
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              window.location.reload();
+            });
+          };
+        }
+      } else {
+        statusText.textContent = "✅ You're on the latest version";
+        statusArrow.textContent = '✓';
+        setTimeout(() => {
+          if (statusText) statusText.textContent = 'Tap to check for latest version';
+          if (statusArrow) statusArrow.textContent = '→';
+        }, 3000);
+      }
+    }).catch(() => {
+      statusText.textContent = 'Could not check — try again';
+      statusArrow.textContent = '→';
+    });
   });
 }
 </script>
