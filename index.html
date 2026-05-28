@@ -1235,6 +1235,14 @@ function fmt(n) {
 function dateStr(d) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
 }
+function dayDateStr(d) {
+  const date = new Date(d + 'T12:00:00');
+  const todayD = new Date(); todayD.setHours(12,0,0,0);
+  const yestD  = new Date(); yestD.setDate(yestD.getDate()-1); yestD.setHours(12,0,0,0);
+  if (date.toDateString() === todayD.toDateString()) return 'Today';
+  if (date.toDateString() === yestD.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+}
 function catInfo(type, id) {
   return (CATS[type] || CATS.expense).find(c => c.id === id) || { label:'Other', icon:'📦', color:'#94A3B8' };
 }
@@ -2191,10 +2199,13 @@ function renderHoursPage() {
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0,0,0,0);
 
-  const todayMins = hoursData.filter(e => e.date === todayStr).reduce((s,e) => s+e.duration, 0);
-  const weekMins  = hoursData.filter(e => new Date(e.date+'T12:00:00') >= weekStart).reduce((s,e) => s+e.duration, 0);
-  const monthMins = hoursData.filter(e => e.date.startsWith(todayStr.slice(0,7))).reduce((s,e) => s+e.duration, 0);
-  const totalMins = hoursData.reduce((s,e) => s+e.duration, 0);
+  const todayMins  = hoursData.filter(e => e.date === todayStr).reduce((s,e) => s+e.duration, 0);
+  const weekMins   = hoursData.filter(e => new Date(e.date+'T12:00:00') >= weekStart).reduce((s,e) => s+e.duration, 0);
+  const monthMins  = hoursData.filter(e => e.date.startsWith(todayStr.slice(0,7))).reduce((s,e) => s+e.duration, 0);
+  const totalMins  = hoursData.reduce((s,e) => s+e.duration, 0);
+  const weekDays   = new Set(hoursData.filter(e => new Date(e.date+'T12:00:00') >= weekStart).map(e => e.date)).size;
+  const monthDays  = new Set(hoursData.filter(e => e.date.startsWith(todayStr.slice(0,7))).map(e => e.date)).size;
+  const totalDays  = new Set(hoursData.map(e => e.date)).size;
 
   const hourlyRate = parseFloat(localStorage.getItem('spendie-rate') || '0');
   const monthEarnings = hourlyRate > 0 ? (monthMins / 60) * hourlyRate : 0;
@@ -2203,9 +2214,9 @@ function renderHoursPage() {
   let html = `
     <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
       <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(todayMins)}</div></div>
-      <div class="stat-card"><div class="stat-label">This Week</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(weekMins)}</div></div>
-      <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(monthMins)}</div></div>
-      <div class="stat-card"><div class="stat-label">All Time</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(totalMins)}</div></div>
+      <div class="stat-card"><div class="stat-label">This Week</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(weekMins)}</div><div style="font-size:11px;color:var(--text3);margin-top:3px;">${weekDays} day${weekDays !== 1 ? 's' : ''}</div></div>
+      <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(monthMins)}</div><div style="font-size:11px;color:var(--text3);margin-top:3px;">${monthDays} day${monthDays !== 1 ? 's' : ''}</div></div>
+      <div class="stat-card"><div class="stat-label">All Time</div><div class="stat-value" style="color:var(--aqua);font-size:16px;">${fmtDuration(totalMins)}</div><div style="font-size:11px;color:var(--text3);margin-top:3px;">${totalDays} day${totalDays !== 1 ? 's' : ''}</div></div>
     </div>
     ${hourlyRate > 0 ? `
     <div class="card" style="background:var(--gradient);border:none;margin-bottom:14px;">
@@ -2246,7 +2257,7 @@ function renderHoursPage() {
       html += `
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;
           letter-spacing:.6px;margin:16px 0 8px;padding:0 4px;display:flex;justify-content:space-between;">
-          <span>${dateStr(date)}</span>
+          <span>${dayDateStr(date)}</span>
           <span style="color:var(--aqua);">${fmtDuration(dayMins)}</span>
         </div>
         <div class="card" style="margin-bottom:8px;">`;
@@ -2336,7 +2347,7 @@ function renderHoursCard() {
           <div class="hours-entry-icon">🕐</div>
           <div class="hours-entry-info">
             <div class="hours-entry-project">${e.project}</div>
-            <div class="hours-entry-meta">${dateStr(e.date)}${e.notes ? ' · ' + e.notes : ''}</div>
+            <div class="hours-entry-meta">${dayDateStr(e.date)}${e.notes ? ' · ' + e.notes : ''}</div>
           </div>
           <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
           <button class="hours-entry-delete" onclick="deleteHoursEntry(${e.id})">🗑️</button>
