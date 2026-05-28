@@ -1297,7 +1297,10 @@ function dayDateStr(d) {
 function catInfo(type, id) {
   return (CATS[type] || CATS.expense).find(c => c.id === id) || { label:'Other', icon:'📦', color:'#94A3B8' };
 }
-function today() { return new Date().toISOString().split('T')[0]; }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 /* ── DARK MODE ───────────────────────────────────────────────── */
 function toggleDark() {
@@ -2037,6 +2040,7 @@ let hoursCardInterval = null;
 let clockInTime = null;
 let clockTimerInterval = null;
 let pendingClockDuration = 0; // minutes from clock-out
+let pendingClockDate = ''; // date string saved at clock-out
 
 // Load / Save
 function loadHours() {
@@ -2197,6 +2201,9 @@ function handleClockOut() {
   localStorage.removeItem('spendie-breaks');
   pendingClockDuration = durationMins;
 
+  // Save date before clearing (used by saveHoursEntry)
+  pendingClockDate = localStorage.getItem('spendie-clockin-date') || today();
+
   // Clear clock in state
   clockInTime = null;
   localStorage.removeItem('spendie-clockin');
@@ -2227,7 +2234,7 @@ function saveHoursEntry() {
   const project  = document.getElementById('h-project').value.trim() || 'Work';
   const notes    = document.getElementById('h-notes').value.trim();
   const dateVal = pendingClockDuration > 0
-    ? (localStorage.getItem('spendie-clockin-date') || today())
+    ? (pendingClockDate || today())
     : (document.getElementById('h-date').value || today());
   let durationMins = 0;
 
