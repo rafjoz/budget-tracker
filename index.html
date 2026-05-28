@@ -1311,10 +1311,11 @@ if (localStorage.getItem('spendie-dark') === '1') document.body.classList.add('d
 
 /* ── STREAK ──────────────────────────────────────────────────── */
 function updateStreak() {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = today();
   if (data.lastTracked === todayStr) return;
-  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-  const yStr = yesterday.toISOString().split('T')[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
   if (data.lastTracked === yStr) { data.streak = (data.streak || 0) + 1; }
   else { data.streak = 1; }
   data.lastTracked = todayStr;
@@ -2083,6 +2084,8 @@ function openHoursSheet() {
 function closeHoursSheet() {
   document.getElementById('hours-overlay').classList.remove('visible');
   document.getElementById('hours-sheet').classList.remove('visible');
+  document.getElementById('h-save-btn').textContent = 'Save Hours';
+  editingHoursId = null;
   stopTimerDisplay();
 }
 
@@ -2231,16 +2234,33 @@ function handleClockOut() {
 
 // Save entry (both clock-out and manual)
 function saveHoursEntry() {
-  const project  = document.getElementById('h-project').value.trim() || 'Work';
-  const notes    = document.getElementById('h-notes').value.trim();
+  const project = document.getElementById('h-project').value.trim() || 'Work';
+  const notes   = document.getElementById('h-notes').value.trim();
   const dateVal = pendingClockDuration > 0
     ? (pendingClockDate || today())
     : (document.getElementById('h-date').value || today());
   let durationMins = 0;
 
-  if (pendingClockDuration > 0) {
+  if (editingHoursId !== null) {
+    // Edit mode — keep original duration, just update fields
+    const existing = hoursData.find(e => e.id === editingHoursId);
+    if (existing) {
+      existing.project = project;
+      existing.notes   = notes;
+      existing.date    = dateVal;
+    }
+    editingHoursId = null;
+  } else if (pendingClockDuration > 0) {
     // From clock in/out
     durationMins = pendingClockDuration;
+    const entry = {
+      id: Date.now(),
+      date: dateVal,
+      project,
+      notes,
+      duration: Math.round(durationMins),
+    };
+    hoursData.unshift(entry);
   } else {
     // From manual entry
     const start = document.getElementById('h-start').value;
@@ -2250,21 +2270,60 @@ function saveHoursEntry() {
     const [eh, em] = end.split(':').map(Number);
     durationMins = (eh * 60 + em) - (sh * 60 + sm);
     if (durationMins <= 0) { alert('End time must be after start time.'); return; }
+    const entry = {
+      id: Date.now(),
+      date: dateVal,
+      project,
+      notes,
+      duration: Math.round(durationMins),
+    };
+    hoursData.unshift(entry);
   }
 
-  const entry = {
-    id: Date.now(),
-    date: dateVal,
-    project,
-    notes,
-    duration: Math.round(durationMins),
-  };
-
-  hoursData.unshift(entry);
   saveHours();
   showSaveToast();
   closeHoursSheet();
+  if (currentPage === 'hours') renderHoursPage();
   renderHoursCard();
+}
+
+function editHoursEntry(id) {
+  const entry = hoursData.find(e => e.id === id);
+  if (!entry) return;
+
+  editingHoursId = id;
+  pendingClockDuration = 0; // not a clock-out flow
+
+  // Open the sheet
+  document.getElementById('hours-overlay').classList.add('visible');
+  document.getElementById('hours-sheet').classList.add('visible');
+
+  // Reset first, then fill in values
+  resetHoursSheet();
+
+  // Show manual form with time row hidden (we only have duration, not start/end)
+  const form = document.getElementById('manual-form');
+  form.classList.add('visible');
+  document.getElementById('manual-time-row').style.display = 'none';
+
+  // Pre-fill fields
+  document.getElementById('h-date').value    = entry.date;
+  document.getElementById('h-project').value = entry.project || '';
+  document.getElementById('h-notes').value   = entry.notes   || '';
+
+  // Show duration info in the clockout prompt area
+  const prompt = document.getElementById('clockout-prompt');
+  prompt.style.display = 'block';
+  document.getElementById('clockout-summary').textContent =
+    `Editing: ${fmtDuration(entry.duration)} session`;
+
+  // Change button label
+  document.getElementById('h-save-btn').textContent = '💾 Update Hours';
+
+  // Hide clock buttons
+  document.getElementById('clock-in-btn').style.display  = 'none';
+  document.getElementById('clock-out-btn').style.display = 'none';
+  document.getElementById('clock-timer-display').style.display = 'none';
 }
 
 // Delete entry
@@ -2354,6 +2413,7 @@ function renderHoursPage() {
               <div class="hours-entry-meta">${e.notes || 'No notes'}</div>
             </div>
             <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
+            <button class="hours-entry-delete" onclick="editHoursEntry(${e.id})" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
             <button class="hours-entry-delete" onclick="deleteHoursEntry(${e.id});renderHoursPage();">🗑️</button>
           </div>`;
       });
@@ -2434,6 +2494,7 @@ function renderHoursCard() {
             <div class="hours-entry-meta">${dayDateStr(e.date)}${e.notes ? ' · ' + e.notes : ''}</div>
           </div>
           <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
+          <button class="hours-entry-delete" onclick="editHoursEntry(${e.id})" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
           <button class="hours-entry-delete" onclick="deleteHoursEntry(${e.id})">🗑️</button>
         </div>`;
     });
