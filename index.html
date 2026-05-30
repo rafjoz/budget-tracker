@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v2.6.1
+   SPENDIE v2.7
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -1014,6 +1014,80 @@ body.dark .nav-pill {
   margin-bottom: 4px;
 }
 
+/* ── QUICK ADD MENU ─────────────────────────────────────────── */
+.quick-add-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.quick-add-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.quick-add-menu {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px;
+  box-shadow: 0 8px 32px rgba(11,27,58,.15), 0 2px 8px rgba(11,27,58,.08);
+  z-index: 52;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  min-width: 220px;
+}
+body.dark .quick-add-menu {
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.quick-add-menu.visible {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(-50%) translateY(0);
+}
+.quick-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .15s;
+  text-align: left;
+}
+.quick-add-btn:hover { background: var(--bg2); }
+.quick-add-btn:active { background: var(--bg2); transform: scale(.98); }
+.quick-add-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.quick-add-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.quick-add-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 1px;
+}
+
 /* ── HIDDEN FILE INPUT ──────────────────────────────────────── */
 #import-file, #ob-import-file { display: none; }
    input, select, textarea {
@@ -1070,6 +1144,7 @@ body.dark .nav-pill {
   <div class="header-actions">
     <button class="icon-btn" onclick="toggleDark()" title="Toggle dark mode" style="background:var(--bg2);border-radius:12px;width:40px;height:40px;font-size:18px;">🌙</button>
     <button class="icon-btn" onclick="openExportSheet()" title="Export" style="background:var(--bg2);border-radius:12px;width:40px;height:40px;font-size:18px;">📤</button>
+    <button class="icon-btn" onclick="currentPage='settings';document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-settings').classList.add('active');renderSettings();" title="Settings" style="background:var(--bg2);border-radius:12px;width:40px;height:40px;font-size:18px;">⚙️</button>
   </div>
 </header>
 
@@ -1111,34 +1186,50 @@ body.dark .nav-pill {
 <!-- SAVE TOAST -->
 <div class="save-toast" id="save-toast">✓ Saved</div>
 
-<!-- FAB removed — now lives in nav pill -->
+<!-- Quick Add Menu -->
+<div class="quick-add-overlay" id="quick-add-overlay" onclick="closeQuickAdd()"></div>
+<div class="quick-add-menu" id="quick-add-menu">
+  <button class="quick-add-btn" onclick="closeQuickAdd();openAddSheet();">
+    <div class="quick-add-icon" style="background:rgba(255,107,107,.15);">💸</div>
+    <div class="quick-add-info">
+      <div class="quick-add-title">Add Transaction</div>
+      <div class="quick-add-sub">Income or expense</div>
+    </div>
+  </button>
+  <button class="quick-add-btn" onclick="closeQuickAdd();openHoursSheet();">
+    <div class="quick-add-icon" style="background:rgba(49,198,227,.12);">⏱️</div>
+    <div class="quick-add-info">
+      <div class="quick-add-title">Log Hours</div>
+      <div class="quick-add-sub">Clock in or manual entry</div>
+    </div>
+  </button>
+</div>
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <div class="nav-pill">
-    <button class="nav-tab active" data-page="home" onclick="switchPage('home',this)">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span class="tab-label">Home</span>
-    </button>
-    <button class="nav-tab" data-page="tx" onclick="switchPage('tx',this)">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-      <span class="tab-label">Transactions</span>
-    </button>
-    <button class="nav-tab nav-tab-center" data-page="home" onclick="openAddSheet()">
-      <div class="nav-fab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </div>
-      <span class="tab-label" style="opacity:0;pointer-events:none;">Add</span>
-    </button>
-    <button class="nav-tab" data-page="insights" onclick="switchPage('insights',this)">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span class="tab-label">Insights</span>
-    </button>
-    <button class="nav-tab" data-page="settings" onclick="switchPage('settings',this)">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span class="tab-label">Settings</span>
-    </button>
-  </div>
+      <button class="nav-tab active" data-page="home" onclick="switchPage('home',this)">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="tab-label">Home</span>
+      </button>
+      <button class="nav-tab" data-page="tx" onclick="switchPage('tx',this)">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <span class="tab-label">Transactions</span>
+      </button>
+      <button class="nav-tab nav-tab-center" onclick="toggleQuickAdd()">
+        <div class="nav-fab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </button>
+      <button class="nav-tab" data-page="insights" onclick="switchPage('insights',this)">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="tab-label">Insights</span>
+      </button>
+      <button class="nav-tab" data-page="hours" onclick="switchPage('hours',this)">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span class="tab-label">Hours</span>
+      </button>
+    </div>
   </nav>
 
 </div>
@@ -1406,6 +1497,7 @@ function handleObImport(e) {
       if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
       data = { income: imported.income, expenses: imported.expenses, streak: imported.streak || 0, lastTracked: imported.lastTracked || null };
       saveData();
+      if (imported.budgets) { budgets = imported.budgets; saveBudgets(); }
       if (imported.hours) { hoursData = imported.hours; saveHours(); }
       if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
       // Get name from data or prompt
@@ -1961,7 +2053,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.6.1</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.7</p>`;
 }
 
 function changeName() {
@@ -2021,8 +2113,13 @@ function manageBudgets() {
 function clearAllData() {
   if (!confirm('Delete ALL data? This cannot be undone.')) return;
   data = { income: [], expenses: [], streak: 0, lastTracked: null };
+  budgets = {};
+  hoursData = [];
   saveData();
+  saveBudgets();
+  saveHours();
   renderPage(currentPage);
+  renderHoursCard();
 }
 
 /* ── ADD TRANSACTION ─────────────────────────────────────────── */
@@ -2618,6 +2715,7 @@ function exportCSV() {
 function exportJSON() {
   const exportData = {
     ...data,
+    budgets,
     hours: hoursData,
     clockIn: clockInTime ? clockInTime.toString() : null
   };
@@ -2640,6 +2738,7 @@ function importJSON(e) {
       if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
       data = { income: imported.income, expenses: imported.expenses, streak: imported.streak || 0, lastTracked: imported.lastTracked || null };
       saveData();
+      if (imported.budgets) { budgets = imported.budgets; saveBudgets(); }
       if (imported.hours) { hoursData = imported.hours; saveHours(); }
       if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
       closeExportSheet(); renderPage(currentPage); renderHoursCard();
@@ -2678,6 +2777,23 @@ if ('serviceWorker' in navigator) {
         });
       });
   });
+}
+/* ── QUICK ADD MENU ──────────────────────────────────────────── */
+function toggleQuickAdd() {
+  const menu    = document.getElementById('quick-add-menu');
+  const overlay = document.getElementById('quick-add-overlay');
+  const isOpen  = menu.classList.contains('visible');
+  if (isOpen) {
+    closeQuickAdd();
+  } else {
+    menu.classList.add('visible');
+    overlay.classList.add('visible');
+  }
+}
+
+function closeQuickAdd() {
+  document.getElementById('quick-add-menu').classList.remove('visible');
+  document.getElementById('quick-add-overlay').classList.remove('visible');
 }
 function checkForUpdates() {
   const statusText  = document.getElementById('update-status-text');
