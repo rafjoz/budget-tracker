@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v2.8
+   SPENDIE v2.9
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -1173,6 +1173,82 @@ body.dark .quick-add-menu {
 .rate-card-lbl { font-size: 10px; color: rgba(255,255,255,.75); margin-top: 3px; font-weight: 500; }
 .rate-card-note { font-size: 11px; color: rgba(255,255,255,.65); margin-top: 10px; text-align: center; line-height: 1.5; }
 
+/* ── PENDING RECURRING BANNER ── */
+.recurring-banner {
+  background: var(--card);
+  border: 1.5px solid var(--aqua);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 20px rgba(49,198,227,.12);
+}
+.recurring-banner-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.recurring-banner-icon { font-size: 22px; flex-shrink: 0; }
+.recurring-banner-title {
+  font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 700;
+  color: var(--text); flex: 1;
+}
+.recurring-banner-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.recurring-item-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.recurring-item-row:last-child { border-bottom: none; }
+.recurring-item-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.recurring-item-info { flex: 1; min-width: 0; }
+.recurring-item-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.recurring-item-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.recurring-item-amount {
+  font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 700;
+}
+.recurring-banner-actions {
+  display: flex; gap: 8px; margin-top: 14px;
+}
+.recurring-confirm-btn {
+  flex: 1; padding: 11px; background: var(--gradient); border: none;
+  border-radius: var(--r-sm); font-family: 'Poppins', sans-serif;
+  font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;
+}
+.recurring-dismiss-btn {
+  padding: 11px 16px; background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer;
+}
+
+/* ── RECURRING MANAGEMENT SHEET ── */
+.recurring-rule-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.recurring-rule-row:last-child { border-bottom: none; }
+.recurring-rule-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.recurring-rule-info { flex: 1; min-width: 0; }
+.recurring-rule-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.recurring-rule-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.recurring-rule-amount {
+  font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 700;
+}
+.freq-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;
+}
+.freq-btn {
+  padding: 10px; border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  background: var(--bg2); font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 600; color: var(--text2);
+  cursor: pointer; transition: all .2s; text-align: center;
+}
+.freq-btn.selected { border-color: var(--aqua); background: rgba(49,198,227,.08); color: var(--aqua); }
+
 /* ── BUDGET ALERT TOAST ── */
 .budget-toast {
   position: fixed;
@@ -1444,6 +1520,71 @@ body.dark .quick-add-menu {
 
 </div>
 
+<!-- ── RECURRING TRANSACTIONS SHEET ─────────────────────── -->
+<div class="sheet-overlay" id="rec-overlay" onclick="closeRecurringSheet()"></div>
+<div class="sheet" id="rec-sheet">
+  <div class="sheet-handle"></div>
+
+  <!-- List view -->
+  <div id="rec-list-view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" style="margin-bottom:0;">Recurring</div>
+      <button onclick="showRecurringForm()" style="padding:8px 16px;background:var(--gradient);border:none;border-radius:var(--r-pill);font-family:Poppins,sans-serif;font-size:13px;font-weight:600;color:#fff;cursor:pointer;">+ Add</button>
+    </div>
+    <div id="rec-rules-list"></div>
+  </div>
+
+  <!-- Add form view -->
+  <div id="rec-form-view" style="display:none;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <button onclick="showRecurringList()" style="background:var(--bg2);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">←</button>
+      <div class="sheet-title" style="margin-bottom:0;">New Recurring</div>
+    </div>
+
+    <div class="type-toggle" id="rec-type-toggle">
+      <button class="type-btn active expense" id="rec-btn-expense" onclick="setRecType('expense')">💸 Expense</button>
+      <button class="type-btn income" id="rec-btn-income" onclick="setRecType('income')">💵 Income</button>
+    </div>
+
+    <label class="form-label">Description</label>
+    <input class="form-input" id="rec-label" type="text" placeholder="e.g. Weekly Salary, Netflix…"/>
+
+    <label class="form-label">Amount</label>
+    <div class="amount-wrap">
+      <span class="amount-prefix" id="rec-amount-prefix">$</span>
+      <input class="form-input amount-input" id="rec-amount" type="number" min="0" step="0.01" placeholder="0.00"/>
+    </div>
+
+    <label class="form-label">Category</label>
+    <div class="cat-grid" id="rec-cat-grid"></div>
+
+    <label class="form-label">Frequency</label>
+    <div class="freq-grid" id="rec-freq-grid">
+      <button class="freq-btn selected" data-freq="weekly" onclick="selectRecFreq('weekly')">📅 Weekly</button>
+      <button class="freq-btn" data-freq="biweekly" onclick="selectRecFreq('biweekly')">📅 Every 2 Weeks</button>
+      <button class="freq-btn" data-freq="monthly" onclick="selectRecFreq('monthly')">🗓️ Monthly</button>
+      <button class="freq-btn" data-freq="daily" onclick="selectRecFreq('daily')">☀️ Daily</button>
+    </div>
+
+    <!-- Day of week picker (shown for weekly/biweekly) -->
+    <div id="rec-dow-wrap" style="margin-bottom:16px;">
+      <label class="form-label">On which day?</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="rec-dow-grid"></div>
+    </div>
+
+    <!-- Day of month picker (shown for monthly) -->
+    <div id="rec-dom-wrap" style="display:none;margin-bottom:16px;">
+      <label class="form-label">On which day of month?</label>
+      <input class="form-input" id="rec-dom" type="number" min="1" max="31" placeholder="e.g. 1, 15, 28" style="margin-bottom:0;"/>
+    </div>
+
+    <label class="form-label">Starting from</label>
+    <input class="form-input" id="rec-start" type="date"/>
+
+    <button class="add-btn" id="rec-save-btn" onclick="saveRecurringRule()">Save Recurring Transaction</button>
+  </div>
+</div>
+
 <!-- ── EXPORT SHEET ───────────────────────────────────────── -->
 <div class="sheet-overlay" id="exp-overlay" onclick="closeExportSheet()"></div>
 <div class="sheet" id="exp-sheet">
@@ -1518,6 +1659,14 @@ let selectedCat = '';
 let currentPage = 'home';
 let editingTxId = null;
 let editingTxType = null;
+let recurringData = [];
+let pendingRecurring = [];
+let recSnoozedDate = '';
+let selectedRecCat = '';
+let selectedRecType = 'expense';
+let selectedRecFreq = 'weekly';
+let selectedRecDow = 1;
+let selectedRecDom = 1;
 
 function loadData() {
   try {
@@ -1565,6 +1714,70 @@ function catInfo(type, id) {
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ── RECURRING DATA ── */
+function loadRecurring() {
+  try {
+    const raw = localStorage.getItem('spendie-recurring');
+    if (raw) recurringData = JSON.parse(raw);
+  } catch(e) { recurringData = []; }
+  recSnoozedDate = localStorage.getItem('spendie-rec-snoozed') || '';
+}
+function saveRecurring() {
+  localStorage.setItem('spendie-recurring', JSON.stringify(recurringData));
+}
+
+function freqLabel(rule) {
+  if (rule.frequency === 'daily')    return 'Daily';
+  if (rule.frequency === 'monthly')  return `Monthly on day ${rule.dayOfMonth}`;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const day = days[rule.dayOfWeek] || '';
+  if (rule.frequency === 'weekly')   return `Every ${day}`;
+  if (rule.frequency === 'biweekly') return `Every other ${day}`;
+  return rule.frequency;
+}
+
+function isDue(rule) {
+  if (!rule.active) return false;
+  const todayStr = today();
+  // Don't show if already added today
+  if (rule.lastAdded === todayStr) return false;
+  // Don't show before start date
+  if (todayStr < rule.startDate) return false;
+
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun
+  const dom = now.getDate();
+
+  if (rule.frequency === 'daily') return true;
+
+  if (rule.frequency === 'weekly') {
+    return dow === rule.dayOfWeek;
+  }
+
+  if (rule.frequency === 'biweekly') {
+    if (dow !== rule.dayOfWeek) return false;
+    if (!rule.lastAdded) return true;
+    // Check if 14+ days since last added
+    const last = new Date(rule.lastAdded + 'T12:00:00');
+    const diffDays = (now - last) / 86400000;
+    return diffDays >= 13;
+  }
+
+  if (rule.frequency === 'monthly') {
+    return dom === rule.dayOfMonth;
+  }
+
+  return false;
+}
+
+function checkRecurring() {
+  if (!recurringData.length) return;
+  const todayStr = today();
+  // If snoozed today, don't show
+  if (recSnoozedDate === todayStr) return;
+  pendingRecurring = recurringData.filter(r => isDue(r));
 }
 
 /* ── DATE RANGE HELPERS ── */
@@ -1646,6 +1859,7 @@ function handleObImport(e) {
       if (imported.budgets) { budgets = imported.budgets; saveBudgets(); }
       if (imported.hours) { hoursData = imported.hours; saveHours(); }
       if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
+      if (imported.recurring) { recurringData = imported.recurring; saveRecurring(); }
       // Get name from data or prompt
       const savedName = localStorage.getItem('spendie-name') || '';
       finishOnboarding(savedName || 'there');
@@ -1797,7 +2011,43 @@ function renderHome() {
   const recent       = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
     .sort((a, b) => b.id - a.id).slice(0, 5);
 
-  let html = `
+  // Pending recurring banner
+  let pendingBannerHtml = '';
+  if (pendingRecurring.length > 0) {
+    let itemsHtml = '';
+    pendingRecurring.forEach(r => {
+      const cat = catInfo(r.type, r.category);
+      const sign = r.type === 'income' ? '+' : '-';
+      const cls  = r.type === 'income' ? 'var(--green)' : 'var(--red)';
+      itemsHtml += `
+        <div class="recurring-item-row">
+          <div class="recurring-item-icon" style="background:${cat.color}22;">${cat.icon}</div>
+          <div class="recurring-item-info">
+            <div class="recurring-item-label">${r.label}</div>
+            <div class="recurring-item-meta">${freqLabel(r)} · ${cat.label}</div>
+          </div>
+          <div class="recurring-item-amount" style="color:${cls};">${sign}${fmt(r.amount)}</div>
+        </div>`;
+    });
+    const total = pendingRecurring.length;
+    pendingBannerHtml = `
+      <div class="recurring-banner">
+        <div class="recurring-banner-header">
+          <div class="recurring-banner-icon">🔄</div>
+          <div>
+            <div class="recurring-banner-title">${total} recurring transaction${total > 1 ? 's' : ''} due today</div>
+            <div class="recurring-banner-sub">Review and confirm to add them</div>
+          </div>
+        </div>
+        ${itemsHtml}
+        <div class="recurring-banner-actions">
+          <button class="recurring-confirm-btn" onclick="confirmRecurring()">✓ Add All Now</button>
+          <button class="recurring-dismiss-btn" onclick="dismissRecurring()">Later</button>
+        </div>
+      </div>`;
+  }
+
+  let html = `${pendingBannerHtml}
     <div class="card hero-card">
       <div class="hero-month">${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</div>
       <div class="hero-label">Total Balance</div>
@@ -1916,6 +2166,36 @@ function renderHome() {
   renderHoursCard();
 }
 
+/* ── RECURRING ACTIONS ── */
+function confirmRecurring() {
+  const todayStr = today();
+  pendingRecurring.forEach(r => {
+    const tx = { id: Date.now() + Math.random(), label: r.label, amount: r.amount, category: r.category, date: todayStr };
+    if (r.type === 'income') data.income.push(tx);
+    else {
+      data.expenses.push(tx);
+      checkBudgetAlerts(r.category);
+    }
+    // Update lastAdded on the rule
+    const rule = recurringData.find(x => x.id === r.id);
+    if (rule) rule.lastAdded = todayStr;
+  });
+  updateStreak();
+  saveData();
+  saveRecurring();
+  pendingRecurring = [];
+  showSaveToast();
+  renderHome();
+}
+
+function dismissRecurring() {
+  const todayStr = today();
+  recSnoozedDate = todayStr;
+  localStorage.setItem('spendie-rec-snoozed', todayStr);
+  pendingRecurring = [];
+  renderHome();
+}
+
 /* ── DATE FILTER STATE ── */
 let txDateStart = '';
 let txDateEnd = '';
@@ -2006,6 +2286,144 @@ function applyHrDateFilter() {
 function clearHrDateFilter() {
   hrDateStart = ''; hrDateEnd = ''; hrDatePreset = '';
   renderHoursPage();
+}
+
+/* ── RECURRING SHEET ── */
+function openRecurringSheet() {
+  document.getElementById('rec-overlay').classList.add('visible');
+  document.getElementById('rec-sheet').classList.add('visible');
+  showRecurringList();
+}
+function closeRecurringSheet() {
+  document.getElementById('rec-overlay').classList.remove('visible');
+  document.getElementById('rec-sheet').classList.remove('visible');
+}
+function showRecurringList() {
+  document.getElementById('rec-list-view').style.display = 'block';
+  document.getElementById('rec-form-view').style.display = 'none';
+  renderRecurringList();
+}
+function showRecurringForm() {
+  document.getElementById('rec-list-view').style.display = 'none';
+  document.getElementById('rec-form-view').style.display = 'block';
+  // Reset form
+  selectedRecCat = '';
+  selectedRecType = 'expense';
+  selectedRecFreq = 'weekly';
+  selectedRecDow = 1;
+  selectedRecDom = 1;
+  document.getElementById('rec-label').value = '';
+  document.getElementById('rec-amount').value = '';
+  document.getElementById('rec-start').value = today();
+  document.getElementById('rec-amount-prefix').textContent = getCurrency().symbol;
+  setRecType('expense');
+  selectRecFreq('weekly');
+  renderRecDowGrid();
+}
+function renderRecurringList() {
+  const el = document.getElementById('rec-rules-list');
+  if (recurringData.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:40px 16px;">
+      <div style="font-size:48px;margin-bottom:12px;">🔄</div>
+      <div class="empty-title">No recurring transactions</div>
+      <div class="empty-sub">Tap + Add to set up your first one</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = recurringData.map(r => {
+    const cat = catInfo(r.type, r.category);
+    const sign = r.type === 'income' ? '+' : '-';
+    const cls  = r.type === 'income' ? 'var(--green)' : 'var(--red)';
+    return `
+      <div class="recurring-rule-row">
+        <div class="recurring-rule-icon" style="background:${cat.color}22;">${cat.icon}</div>
+        <div class="recurring-rule-info">
+          <div class="recurring-rule-label">${r.label}</div>
+          <div class="recurring-rule-meta">${freqLabel(r)} · ${cat.label}</div>
+        </div>
+        <div class="recurring-rule-amount" style="color:${cls};">${sign}${fmt(r.amount)}</div>
+        <button class="tx-delete" onclick="deleteRecurringRule(${r.id})">🗑️</button>
+      </div>`;
+  }).join('');
+}
+function setRecType(type) {
+  selectedRecType = type;
+  document.getElementById('rec-btn-expense').className = 'type-btn' + (type === 'expense' ? ' active expense' : '');
+  document.getElementById('rec-btn-income').className  = 'type-btn' + (type === 'income'  ? ' active income'  : '');
+  selectedRecCat = '';
+  renderRecCatGrid();
+}
+function renderRecCatGrid() {
+  const cats = CATS[selectedRecType];
+  document.getElementById('rec-cat-grid').innerHTML = cats.map(c => `
+    <button class="cat-btn ${selectedRecCat === c.id ? 'selected' : ''}" onclick="selectRecCat('${c.id}')">
+      <span class="cat-emoji">${c.icon}</span>${c.label}
+    </button>`).join('');
+}
+function selectRecCat(id) { selectedRecCat = id; renderRecCatGrid(); }
+function selectRecFreq(freq) {
+  selectedRecFreq = freq;
+  document.querySelectorAll('.freq-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.freq === freq);
+  });
+  const showDow = (freq === 'weekly' || freq === 'biweekly');
+  const showDom = (freq === 'monthly');
+  document.getElementById('rec-dow-wrap').style.display = showDow ? 'block' : 'none';
+  document.getElementById('rec-dom-wrap').style.display = showDom ? 'block' : 'none';
+}
+function renderRecDowGrid() {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('rec-dow-grid').innerHTML = days.map((d, i) => `
+    <button onclick="selectRecDow(${i})" style="
+      padding:8px 10px;border-radius:var(--r-sm);font-size:12px;font-weight:600;
+      border:1.5px solid ${selectedRecDow === i ? 'var(--aqua)' : 'var(--border)'};
+      background:${selectedRecDow === i ? 'rgba(49,198,227,.08)' : 'var(--bg2)'};
+      color:${selectedRecDow === i ? 'var(--aqua)' : 'var(--text2)'};
+      cursor:pointer;font-family:Inter,sans-serif;">
+      ${d}
+    </button>`).join('');
+}
+function selectRecDow(i) { selectedRecDow = i; renderRecDowGrid(); }
+function saveRecurringRule() {
+  const label  = document.getElementById('rec-label').value.trim();
+  const amount = parseFloat(document.getElementById('rec-amount').value);
+  const start  = document.getElementById('rec-start').value;
+  if (!label)          { alert('Please enter a description.'); return; }
+  if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+  if (!selectedRecCat) { alert('Please select a category.'); return; }
+  if (!start)          { alert('Please select a start date.'); return; }
+  if (selectedRecFreq === 'monthly') {
+    const dom = parseInt(document.getElementById('rec-dom').value);
+    if (!dom || dom < 1 || dom > 31) { alert('Please enter a valid day of month (1–31).'); return; }
+    selectedRecDom = dom;
+  }
+  const rule = {
+    id: Date.now(),
+    label, amount,
+    category: selectedRecCat,
+    type: selectedRecType,
+    frequency: selectedRecFreq,
+    dayOfWeek: selectedRecDow,
+    dayOfMonth: selectedRecDom,
+    startDate: start,
+    lastAdded: null,
+    active: true,
+  };
+  recurringData.push(rule);
+  saveRecurring();
+  // Re-check pending in case this rule is already due today
+  checkRecurring();
+  showRecurringList();
+  showSaveToast();
+}
+function deleteRecurringRule(id) {
+  if (!confirm('Delete this recurring transaction?')) return;
+  recurringData = recurringData.filter(r => r.id !== id);
+  saveRecurring();
+  // Remove from pending too if it was there
+  pendingRecurring = pendingRecurring.filter(r => r.id !== id);
+  renderRecurringList();
+  showSaveToast();
 }
 
 /* ── SEARCH HANDLER ──────────────────────────────────────────── */
@@ -2189,7 +2607,7 @@ function openEditTransaction(type, id) {
   renderCatGrid();
   validateAddBtn();
 }
-  function deleteTransaction(type, id) {
+function deleteTransaction(type, id) {
   if (!confirm('Delete this transaction?')) return;
   const arr = type === 'income' ? data.income : data.expenses;
   const idx = arr.findIndex(t => t.id == id);
@@ -2329,6 +2747,14 @@ function renderSettings() {
     </div>
 
     <div class="settings-section">
+      <div class="settings-title">Recurring</div>
+      <div class="settings-row" onclick="openRecurringSheet()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔄</div><div class="settings-row-info"><div class="s-title">Recurring Transactions</div><div class="s-sub">${recurringData.length > 0 ? recurringData.length + ' rule(s) active' : 'Auto-add income & expenses on schedule'}</div></div></div>
+        <div class="settings-row-right">Manage →</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <div class="settings-title">Currency</div>
       <div class="settings-row" onclick="changeCurrency()">
         <div class="settings-row-left"><div class="settings-row-icon">💱</div><div class="settings-row-info"><div class="s-title">Currency</div><div class="s-sub">${getCurrency().label}</div></div></div>
@@ -2380,7 +2806,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.8</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.9</p>`;
 }
 
 function changeName() {
@@ -2442,9 +2868,13 @@ function clearAllData() {
   data = { income: [], expenses: [], streak: 0, lastTracked: null };
   budgets = {};
   hoursData = [];
+  recurringData = [];
+  pendingRecurring = [];
   saveData();
   saveBudgets();
   saveHours();
+  saveRecurring();
+  localStorage.removeItem('spendie-rec-snoozed');
   renderPage(currentPage);
   renderHoursCard();
 }
@@ -3089,7 +3519,8 @@ function exportJSON() {
     ...data,
     budgets,
     hours: hoursData,
-    clockIn: clockInTime ? clockInTime.toString() : null
+    clockIn: clockInTime ? clockInTime.toString() : null,
+    recurring: recurringData,
   };
   const a = document.createElement('a');
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
@@ -3113,6 +3544,7 @@ function importJSON(e) {
       if (imported.budgets) { budgets = imported.budgets; saveBudgets(); }
       if (imported.hours) { hoursData = imported.hours; saveHours(); }
       if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
+      if (imported.recurring) { recurringData = imported.recurring; saveRecurring(); }
       closeExportSheet(); renderPage(currentPage); renderHoursCard();
       alert('✅ Data imported successfully!');
     } catch { alert('Could not read file.'); }
@@ -3123,6 +3555,8 @@ function importJSON(e) {
 /* ── INIT ────────────────────────────────────────────────────── */
 loadData();
 loadHours();
+loadRecurring();
+checkRecurring();
 checkOnboarding();
 renderHome();
 
