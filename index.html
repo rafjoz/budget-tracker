@@ -19,7 +19,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v2.7
+   SPENDIE v2.8
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -1088,6 +1088,110 @@ body.dark .quick-add-menu {
   margin-top: 1px;
 }
 
+/* ── DATE RANGE FILTER ── */
+.date-filter-bar {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: 14px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.date-filter-bar.has-filter { border-color: var(--aqua); }
+.date-filter-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; cursor: pointer;
+}
+.date-filter-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--text2);
+}
+.date-filter-label.active { color: var(--aqua); }
+.date-filter-chevron { font-size: 11px; color: var(--text3); transition: transform .2s; }
+.date-filter-chevron.open { transform: rotate(180deg); }
+.date-filter-body { display: none; padding: 0 16px 16px; flex-direction: column; gap: 12px; }
+.date-filter-body.visible { display: flex; }
+.date-preset-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.date-preset {
+  padding: 6px 12px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--bg2); color: var(--text2);
+  cursor: pointer; transition: all .15s;
+  font-family: 'Inter', sans-serif;
+}
+.date-preset:active { transform: scale(.96); }
+.date-preset.active { background: var(--gradient); border-color: transparent; color: #fff; }
+.date-range-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.date-range-inputs input {
+  padding: 10px 12px; font-size: 13px;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text);
+  font-family: 'Inter', sans-serif; outline: none;
+  transition: border-color .2s;
+}
+.date-range-inputs input:focus { border-color: var(--aqua); }
+.date-filter-actions { display: flex; gap: 8px; }
+.date-filter-apply {
+  flex: 1; padding: 10px; background: var(--gradient); border: none;
+  border-radius: var(--r-sm); font-family: 'Poppins', sans-serif;
+  font-size: 13px; font-weight: 600; color: #fff; cursor: pointer;
+}
+.date-filter-clear {
+  padding: 10px 16px; background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer;
+}
+
+/* ── FILTERED SUMMARY STRIP ── */
+.filter-summary-strip {
+  background: rgba(49,198,227,.06);
+  border: 1.5px solid rgba(49,198,227,.2);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.filter-summary-row { display: flex; justify-content: space-between; align-items: center; }
+.filter-summary-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+.filter-summary-val { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 700; }
+
+/* ── EFFECTIVE RATE CARD ── */
+.rate-card {
+  background: var(--gradient); border: none;
+  border-radius: var(--r-lg); padding: 20px;
+  margin-bottom: 14px; position: relative; overflow: hidden;
+}
+.rate-card::before {
+  content: ''; position: absolute; top: -30px; right: -30px;
+  width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.1);
+}
+.rate-card-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.75); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+.rate-card-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.rate-card-item { background: rgba(255,255,255,.15); border-radius: 12px; padding: 12px 10px; text-align: center; }
+.rate-card-val { font-family: 'Poppins', sans-serif; font-size: 17px; font-weight: 800; color: #fff; }
+.rate-card-lbl { font-size: 10px; color: rgba(255,255,255,.75); margin-top: 3px; font-weight: 500; }
+.rate-card-note { font-size: 11px; color: rgba(255,255,255,.65); margin-top: 10px; text-align: center; line-height: 1.5; }
+
+/* ── BUDGET ALERT TOAST ── */
+.budget-toast {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  left: 50%; transform: translateX(-50%) translateY(10px);
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 12px 18px;
+  box-shadow: 0 8px 24px rgba(11,27,58,.15);
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+  z-index: 301; width: 88%; max-width: 340px;
+  display: flex; align-items: center; gap: 12px;
+}
+.budget-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.budget-toast-icon { font-size: 22px; flex-shrink: 0; }
+.budget-toast-body { flex: 1; }
+.budget-toast-title { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
+.budget-toast-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
 /* ── HIDDEN FILE INPUT ──────────────────────────────────────── */
 #import-file, #ob-import-file { display: none; }
    input, select, textarea {
@@ -1186,6 +1290,15 @@ body.dark .quick-add-menu {
 <!-- SAVE TOAST -->
 <div class="save-toast" id="save-toast">✓ Saved</div>
 
+<!-- Budget alert toast -->
+<div class="budget-toast" id="budget-toast">
+  <div class="budget-toast-icon" id="budget-toast-icon">⚠️</div>
+  <div class="budget-toast-body">
+    <div class="budget-toast-title" id="budget-toast-title">Budget Warning</div>
+    <div class="budget-toast-sub" id="budget-toast-sub"></div>
+  </div>
+</div>
+
 <!-- Quick Add Menu -->
 <div class="quick-add-overlay" id="quick-add-overlay" onclick="closeQuickAdd()"></div>
 <div class="quick-add-menu" id="quick-add-menu">
@@ -1238,7 +1351,7 @@ body.dark .quick-add-menu {
 <div class="sheet-overlay" id="add-overlay" onclick="closeAddSheet()"></div>
 <div class="sheet" id="add-sheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Add Transaction</div>
+  <div class="sheet-title" id="add-sheet-title">Add Transaction</div>
   <div class="type-toggle">
     <button class="type-btn active expense" id="btn-expense" onclick="setType('expense')">💸 Expense</button>
     <button class="type-btn income" id="btn-income" onclick="setType('income')">💵 Income</button>
@@ -1403,6 +1516,8 @@ let budgets = {};
 let currentType = 'expense';
 let selectedCat = '';
 let currentPage = 'home';
+let editingTxId = null;
+let editingTxType = null;
 
 function loadData() {
   try {
@@ -1450,6 +1565,37 @@ function catInfo(type, id) {
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ── DATE RANGE HELPERS ── */
+function getWeekRange(offset = 0) {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const startOfThisWeek = new Date(now);
+  startOfThisWeek.setDate(now.getDate() - dayOfWeek);
+  startOfThisWeek.setHours(0,0,0,0);
+  const start = new Date(startOfThisWeek);
+  start.setDate(startOfThisWeek.getDate() + offset * 7);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start: dateToStr(start), end: dateToStr(end) };
+}
+function getMonthRange(offset = 0) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + offset;
+  const start = new Date(y, m, 1);
+  const end = new Date(y, m + 1, 0);
+  return { start: dateToStr(start), end: dateToStr(end) };
+}
+function dateToStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function inRange(dateStr, start, end) {
+  if (!start && !end) return true;
+  if (start && dateStr < start) return false;
+  if (end && dateStr > end) return false;
+  return true;
 }
 
 /* ── DARK MODE ───────────────────────────────────────────────── */
@@ -1560,6 +1706,33 @@ function showSaveToast() {
   toast.classList.add('visible');
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+
+/* ── BUDGET ALERT TOAST ── */
+let budgetToastTimer = null;
+function showBudgetToast(icon, title, sub) {
+  const toast = document.getElementById('budget-toast');
+  document.getElementById('budget-toast-icon').textContent = icon;
+  document.getElementById('budget-toast-title').textContent = title;
+  document.getElementById('budget-toast-sub').textContent = sub;
+  toast.classList.add('visible');
+  if (budgetToastTimer) clearTimeout(budgetToastTimer);
+  budgetToastTimer = setTimeout(() => toast.classList.remove('visible'), 4000);
+}
+function checkBudgetAlerts(category) {
+  if (!budgets[category]) return;
+  const currentMonth = today().slice(0, 7);
+  const spent = data.expenses
+    .filter(t => t.category === category && t.date.startsWith(currentMonth))
+    .reduce((s, t) => s + t.amount, 0);
+  const limit = budgets[category];
+  const pct = (spent / limit) * 100;
+  const cat = catInfo('expense', category);
+  if (pct >= 90) {
+    showBudgetToast('🔴', `${cat.icon} ${cat.label} budget at ${pct.toFixed(0)}%`, `${fmt(spent)} of ${fmt(limit)} — almost gone!`);
+  } else if (pct >= 75) {
+    showBudgetToast('⚠️', `${cat.icon} ${cat.label} budget at ${pct.toFixed(0)}%`, `${fmt(spent)} of ${fmt(limit)} used this month`);
+  }
 }
 
 /* ── SMART INSIGHTS ──────────────────────────────────────────── */
@@ -1743,6 +1916,98 @@ function renderHome() {
   renderHoursCard();
 }
 
+/* ── DATE FILTER STATE ── */
+let txDateStart = '';
+let txDateEnd = '';
+let txDatePreset = '';
+let hrDateStart = '';
+let hrDateEnd = '';
+let hrDatePreset = '';
+
+function buildDateFilterBar(idPrefix, startVal, endVal, preset, onApply, onClear) {
+  const hasFilter = !!(startVal || endVal);
+  const presets = [
+    { key:'thisWeek',  label:'This Week' },
+    { key:'lastWeek',  label:'Last Week' },
+    { key:'thisMonth', label:'This Month' },
+    { key:'lastMonth', label:'Last Month' },
+  ];
+  return `
+    <div class="date-filter-bar ${hasFilter ? 'has-filter' : ''}" id="${idPrefix}-bar">
+      <div class="date-filter-toggle" onclick="toggleDateFilter('${idPrefix}')">
+        <div class="date-filter-label ${hasFilter ? 'active' : ''}">
+          📅 ${hasFilter
+            ? (startVal && endVal ? `${dateStr(startVal)} → ${dateStr(endVal)}`
+              : startVal ? `From ${dateStr(startVal)}`
+              : `Until ${dateStr(endVal)}`)
+            : 'Filter by date'}
+        </div>
+        <span class="date-filter-chevron" id="${idPrefix}-chevron">▼</span>
+      </div>
+      <div class="date-filter-body" id="${idPrefix}-body">
+        <div class="date-preset-row">
+          ${presets.map(p => `<button class="date-preset ${preset===p.key?'active':''}"
+            onclick="applyDatePreset('${idPrefix}','${p.key}')">${p.label}</button>`).join('')}
+        </div>
+        <div class="date-range-inputs">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">From</div>
+            <input type="date" id="${idPrefix}-start" value="${startVal}"/>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">To</div>
+            <input type="date" id="${idPrefix}-end" value="${endVal}"/>
+          </div>
+        </div>
+        <div class="date-filter-actions">
+          <button class="date-filter-apply" onclick="${onApply}">Apply Filter</button>
+          ${hasFilter ? `<button class="date-filter-clear" onclick="${onClear}">Clear</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+function toggleDateFilter(prefix) {
+  const body = document.getElementById(prefix + '-body');
+  const chevron = document.getElementById(prefix + '-chevron');
+  body.classList.toggle('visible');
+  chevron.classList.toggle('open', body.classList.contains('visible'));
+}
+function applyDatePreset(prefix, key) {
+  let range;
+  if (key === 'thisWeek')  range = getWeekRange(0);
+  if (key === 'lastWeek')  range = getWeekRange(-1);
+  if (key === 'thisMonth') range = getMonthRange(0);
+  if (key === 'lastMonth') range = getMonthRange(-1);
+  if (!range) return;
+  if (prefix === 'tx-filter') {
+    txDateStart = range.start; txDateEnd = range.end; txDatePreset = key;
+    renderTransactions(document.getElementById('tx-search')?.value || '', document.querySelector('.filter-chip.active')?.dataset.type || 'all');
+  } else if (prefix === 'hr-filter') {
+    hrDateStart = range.start; hrDateEnd = range.end; hrDatePreset = key;
+    renderHoursPage();
+  }
+}
+function applyTxDateFilter() {
+  txDateStart = document.getElementById('tx-filter-start')?.value || '';
+  txDateEnd   = document.getElementById('tx-filter-end')?.value || '';
+  txDatePreset = '';
+  renderTransactions(document.getElementById('tx-search')?.value || '', document.querySelector('.filter-chip.active')?.dataset.type || 'all');
+}
+function clearTxDateFilter() {
+  txDateStart = ''; txDateEnd = ''; txDatePreset = '';
+  renderTransactions('', 'all');
+}
+function applyHrDateFilter() {
+  hrDateStart = document.getElementById('hr-filter-start')?.value || '';
+  hrDateEnd   = document.getElementById('hr-filter-end')?.value || '';
+  hrDatePreset = '';
+  renderHoursPage();
+}
+function clearHrDateFilter() {
+  hrDateStart = ''; hrDateEnd = ''; hrDatePreset = '';
+  renderHoursPage();
+}
+
 /* ── SEARCH HANDLER ──────────────────────────────────────────── */
 let searchDebounce = null;
 function handleSearch(value) {
@@ -1761,9 +2026,9 @@ function renderTransactions(searchTerm = '', filterType = 'all') {
   let all = [...data.income.map(t => ({...t, type:'income'})), ...data.expenses.map(t => ({...t, type:'expense'}))]
     .sort((a, b) => b.id - a.id);
 
-  // Apply type filter
   if (filterType === 'income')  all = all.filter(t => t.type === 'income');
   if (filterType === 'expense') all = all.filter(t => t.type === 'expense');
+  if (txDateStart || txDateEnd) all = all.filter(t => inRange(t.date, txDateStart, txDateEnd));
 
   // Apply search
   if (searchTerm.trim()) {
@@ -1774,7 +2039,45 @@ function renderTransactions(searchTerm = '', filterType = 'all') {
     );
   }
 
-  // Search bar + filter chips
+  // Filtered summary strip
+  let filterSummaryHtml = '';
+  if (txDateStart || txDateEnd) {
+    const filteredIncome  = all.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const filteredExpense = all.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const filteredNet = filteredIncome - filteredExpense;
+    const filteredHoursMins = hoursData.filter(e => inRange(e.date, txDateStart, txDateEnd)).reduce((s, e) => s + e.duration, 0);
+    const filteredHrs = filteredHoursMins / 60;
+    let effectiveRateHtml = '';
+    if (filteredHrs > 0 && filteredIncome > 0) {
+      const rate = filteredIncome / filteredHrs;
+      effectiveRateHtml = `
+        <div class="filter-summary-row">
+          <span class="filter-summary-label">⏱️ Hours worked</span>
+          <span class="filter-summary-val" style="color:var(--aqua);">${fmtDuration(filteredHoursMins)}</span>
+        </div>
+        <div class="filter-summary-row">
+          <span class="filter-summary-label">💡 Effective rate</span>
+          <span class="filter-summary-val" style="color:var(--mint);">${fmt(rate)}/hr</span>
+        </div>`;
+    }
+    filterSummaryHtml = `
+      <div class="filter-summary-strip">
+        <div class="filter-summary-row">
+          <span class="filter-summary-label">📥 Income</span>
+          <span class="filter-summary-val" style="color:var(--green);">+${fmt(filteredIncome)}</span>
+        </div>
+        <div class="filter-summary-row">
+          <span class="filter-summary-label">📤 Expenses</span>
+          <span class="filter-summary-val" style="color:var(--red);">-${fmt(filteredExpense)}</span>
+        </div>
+        <div class="filter-summary-row">
+          <span class="filter-summary-label">💰 Net</span>
+          <span class="filter-summary-val" style="color:${filteredNet >= 0 ? 'var(--green)' : 'var(--red)'};">${filteredNet >= 0 ? '+' : '-'}${fmt(Math.abs(filteredNet))}</span>
+        </div>
+        ${effectiveRateHtml}
+      </div>`;
+  }
+
   let html = `
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -1794,7 +2097,9 @@ function renderTransactions(searchTerm = '', filterType = 'all') {
         onclick="renderTransactions(document.getElementById('tx-search').value, 'expense')">💸 Expenses</button>
       <button class="filter-chip ${filterType==='income'  ? 'active':''}" data-type="income"
         onclick="renderTransactions(document.getElementById('tx-search').value, 'income')">💵 Income</button>
-    </div>`;
+    </div>
+    ${buildDateFilterBar('tx-filter', txDateStart, txDateEnd, txDatePreset, "applyTxDateFilter()", "clearTxDateFilter()")}
+    ${filterSummaryHtml}`;
 
   if (all.length === 0) {
     const isSearching = searchTerm.trim() || filterType !== 'all';
@@ -1844,7 +2149,10 @@ function renderTransactions(searchTerm = '', filterType = 'all') {
 function txRow(t, cat, showDelete = false) {
   const sign = t.type === 'income' ? '+' : '-';
   const cls  = t.type === 'income' ? 'income' : 'expense';
-  const del  = showDelete ? `<button class="tx-delete" onclick="deleteTransaction('${t.type}',${t.id})">🗑️</button>` : '';
+  const del  = showDelete
+    ? `<button class="tx-delete" title="Edit" onclick="openEditTransaction('${t.type}',${t.id})">✏️</button>
+       <button class="tx-delete" onclick="deleteTransaction('${t.type}',${t.id})">🗑️</button>`
+    : '';
   const rate = parseFloat(localStorage.getItem('spendie-rate') || '0');
   const workHours = (rate > 0 && t.type === 'expense')
     ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;">= ${(t.amount / rate).toFixed(1)} hrs of work</div>`
@@ -1862,7 +2170,26 @@ function txRow(t, cat, showDelete = false) {
   </div>`;
 }
 
-function deleteTransaction(type, id) {
+function openEditTransaction(type, id) {
+  const arr = type === 'income' ? data.income : data.expenses;
+  const tx = arr.find(t => t.id == id);
+  if (!tx) return;
+  editingTxId = id;
+  editingTxType = type;
+  document.getElementById('add-overlay').classList.add('visible');
+  document.getElementById('add-sheet').classList.add('visible');
+  document.getElementById('add-sheet-title').textContent = 'Edit Transaction';
+  document.getElementById('add-btn').textContent = '💾 Update Transaction';
+  document.getElementById('amount-prefix').textContent = getCurrency().symbol;
+  setType(type);
+  document.getElementById('f-amount').value = tx.amount;
+  document.getElementById('f-desc').value = tx.label;
+  document.getElementById('f-date').value = tx.date;
+  selectedCat = tx.category;
+  renderCatGrid();
+  validateAddBtn();
+}
+  function deleteTransaction(type, id) {
   if (!confirm('Delete this transaction?')) return;
   const arr = type === 'income' ? data.income : data.expenses;
   const idx = arr.findIndex(t => t.id == id);
@@ -2053,7 +2380,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.7</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.8</p>`;
 }
 
 function changeName() {
@@ -2124,11 +2451,18 @@ function clearAllData() {
 
 /* ── ADD TRANSACTION ─────────────────────────────────────────── */
 function openAddSheet() {
+  editingTxId = null; editingTxType = null;
+  document.getElementById('add-sheet-title').textContent = 'Add Transaction';
+  document.getElementById('add-btn').textContent = 'Add Transaction';
   document.getElementById('add-overlay').classList.add('visible');
   document.getElementById('add-sheet').classList.add('visible');
   document.getElementById('f-date').value = today();
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-desc').value = '';
+  selectedCat = '';
   setType('expense');
-  document.getElementById('amount-prefix').textContent = getCurrency().symbol; // ← ADD THIS
+  document.getElementById('amount-prefix').textContent = getCurrency().symbol;
+  validateAddBtn();
 }
 
 function closeAddSheet() {
@@ -2136,14 +2470,16 @@ function closeAddSheet() {
   document.getElementById('add-sheet').classList.remove('visible');
   document.getElementById('f-amount').value = '';
   document.getElementById('f-desc').value = '';
-  selectedCat = '';
+  selectedCat = ''; editingTxId = null; editingTxType = null;
+  document.getElementById('add-sheet-title').textContent = 'Add Transaction';
+  document.getElementById('add-btn').textContent = 'Add Transaction';
   validateAddBtn();
 }
 function setType(type) {
   currentType = type;
   document.getElementById('btn-expense').className = 'type-btn' + (type==='expense' ? ' active expense' : '');
   document.getElementById('btn-income').className  = 'type-btn' + (type==='income'  ? ' active income'  : '');
-  selectedCat = '';
+  if (editingTxId === null) selectedCat = '';
   renderCatGrid();
 }
 function renderCatGrid() {
@@ -2174,11 +2510,19 @@ function addTransaction() {
   if (!selectedCat)       { alert('Please select a category.'); return; }
   if (!date)              { alert('Please select a date.'); return; }
 
-  const tx = { id: Date.now(), label: desc, amount: amt, category: selectedCat, date };
-  if (currentType === 'income') data.income.push(tx);
-  else data.expenses.push(tx);
-
-  updateStreak();
+  if (editingTxId !== null) {
+    const arr = editingTxType === 'income' ? data.income : data.expenses;
+    const tx = arr.find(t => t.id == editingTxId);
+    if (tx) { tx.label = desc; tx.amount = amt; tx.category = selectedCat; tx.date = date; }
+  } else {
+    const tx = { id: Date.now(), label: desc, amount: amt, category: selectedCat, date };
+    if (currentType === 'income') data.income.push(tx);
+    else {
+      data.expenses.push(tx);
+      setTimeout(() => checkBudgetAlerts(selectedCat), 700);
+    }
+    updateStreak();
+  }
   saveData();
   showSuccess(() => {
     showSaveToast();
@@ -2532,7 +2876,33 @@ function renderHoursPage() {
       <div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:10px;text-align:center;">Based on ${fmt(hourlyRate)}/hr · Set in Settings → Work</div>
     </div>` : ''}`;
 
-  if (hoursData.length === 0) {
+  // Date filter bar
+  html += buildDateFilterBar('hr-filter', hrDateStart, hrDateEnd, hrDatePreset, "applyHrDateFilter()", "clearHrDateFilter()");
+
+  // Effective rate card when date range active
+  if (hrDateStart || hrDateEnd) {
+    const filteredMins = hoursData.filter(e => inRange(e.date, hrDateStart, hrDateEnd)).reduce((s,e) => s+e.duration, 0);
+    const filteredHrs = filteredMins / 60;
+    const rangeIncome = data.income.filter(t => inRange(t.date, hrDateStart, hrDateEnd)).reduce((s,t) => s+t.amount, 0);
+    const effectiveRate = filteredHrs > 0 && rangeIncome > 0 ? rangeIncome / filteredHrs : 0;
+    html += `
+      <div class="rate-card">
+        <div class="rate-card-title">📊 Date Range Summary</div>
+        <div class="rate-card-grid">
+          <div class="rate-card-item"><div class="rate-card-val">${fmtDuration(filteredMins)}</div><div class="rate-card-lbl">Hours Worked</div></div>
+          <div class="rate-card-item"><div class="rate-card-val">${fmt(rangeIncome)}</div><div class="rate-card-lbl">Income Earned</div></div>
+          <div class="rate-card-item"><div class="rate-card-val">${effectiveRate > 0 ? fmt(effectiveRate) : '—'}</div><div class="rate-card-lbl">Effective Rate</div></div>
+        </div>
+        <div class="rate-card-note">${effectiveRate > 0 ? `💡 You earned ${fmt(effectiveRate)}/hr in this period${hourlyRate > 0 ? ` vs your set rate of ${fmt(hourlyRate)}/hr` : ''}` : 'Add income transactions for this period to see your effective hourly rate'}</div>
+      </div>`;
+  }
+
+  // Filter hours list if range active
+  const displayHours = (hrDateStart || hrDateEnd)
+    ? hoursData.filter(e => inRange(e.date, hrDateStart, hrDateEnd))
+    : hoursData;
+
+  if (displayHours.length === 0 && hoursData.length === 0) {
     html += `
       <div class="empty-state" style="padding:60px 20px;">
         <div style="font-size:64px;margin-bottom:16px;">⏱️</div>
@@ -2544,9 +2914,11 @@ function renderHoursPage() {
           ▶ Clock In Now
         </button>
       </div>`;
+  } else if (displayHours.length === 0) {
+    html += `<div class="empty-state" style="padding:40px 20px;"><div style="font-size:48px;margin-bottom:12px;">🔍</div><div class="empty-title">No hours in this range</div><div class="empty-sub">Try a different date range or clear the filter.</div></div>`;
   } else {
     const groups = {};
-    hoursData.forEach(e => {
+    displayHours.forEach(e => {
       if (!groups[e.date]) groups[e.date] = [];
       groups[e.date].push(e);
     });
