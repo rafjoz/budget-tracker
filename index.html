@@ -2587,8 +2587,8 @@ function txRow(t, cat, showDelete = false) {
   const sign = t.type === 'income' ? '+' : '-';
   const cls  = t.type === 'income' ? 'income' : 'expense';
   const del  = showDelete
-    ? `<button class="tx-delete" title="Edit" onclick="openEditTransaction('${t.type}',${t.id})">✏️</button>
-       <button class="tx-delete" onclick="deleteTransaction('${t.type}',${t.id})">🗑️</button>`
+    ? `<button class="tx-delete" title="Edit" onclick="openEditTransaction('${t.type}','${t.id}')">✏️</button>
+       <button class="tx-delete" onclick="deleteTransaction('${t.type}','${t.id}')">🗑️</button>`
     : '';
   const rate = parseFloat(localStorage.getItem('spendie-rate') || '0');
   const workHours = (rate > 0 && t.type === 'expense')
@@ -2609,7 +2609,7 @@ function txRow(t, cat, showDelete = false) {
 
 function openEditTransaction(type, id) {
   const arr = type === 'income' ? data.income : data.expenses;
-  const tx = arr.find(t => t.id == id);
+  const tx = arr.find(t => String(t.id) === String(id));
   if (!tx) return;
   editingTxId = id;
   editingTxType = type;
@@ -2629,7 +2629,7 @@ function openEditTransaction(type, id) {
 function deleteTransaction(type, id) {
   if (!confirm('Delete this transaction?')) return;
   const arr = type === 'income' ? data.income : data.expenses;
-  const idx = arr.findIndex(t => t.id == id);
+  const idx = arr.findIndex(t => String(t.id) === String(id));
   if (idx !== -1) arr.splice(idx, 1);
   saveData();
   showSaveToast();
@@ -3262,7 +3262,8 @@ function saveHoursEntry() {
 }
 
 function editHoursEntry(id) {
-  const entry = hoursData.find(e => e.id === id);
+  <button class="hours-entry-delete" onclick="editHoursEntry('${e.id}')" style="opacity:.5;font-size:1const entry = hoursData.find(e => String(e.id) === String(id));3px;" title="Edit">✏️</button>
+          <button class="hours-entry-delete" onclick="deleteHoursEntry('${e.id}')">🗑️</button>
   if (!entry) return;
 
   editingHoursId = id;
@@ -3303,7 +3304,7 @@ function editHoursEntry(id) {
 // Delete entry
 function deleteHoursEntry(id) {
   if (!confirm('Delete this hours entry?')) return;
-  hoursData = hoursData.filter(e => e.id !== id);
+  hoursData = hoursData.filter(e => String(e.id) !== String(id));
   saveHours();
   renderHoursCard();
   showSaveToast();
@@ -3415,8 +3416,8 @@ function renderHoursPage() {
               <div class="hours-entry-meta">${esc(e.notes) || 'No notes'}</div>
             </div>
             <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
-            <button class="hours-entry-delete" onclick="editHoursEntry(${e.id})" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
-            <button class="hours-entry-delete" onclick="deleteHoursEntry(${e.id});renderHoursPage();">🗑️</button>
+            <button class="hours-entry-delete" onclick="editHoursEntry('${e.id}')" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
+            <button class="hours-entry-delete" onclick="deleteHoursEntry('${e.id}');renderHoursPage();">🗑️</button>
           </div>`;
       });
       html += `</div>`;
@@ -3496,8 +3497,8 @@ function renderHoursCard() {
             <div class="hours-entry-meta">${dayDateStr(e.date)}${e.notes ? ' · ' + esc(e.notes) : ''}</div>
           </div>
           <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
-          <button class="hours-entry-delete" onclick="editHoursEntry(${e.id})" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
-          <button class="hours-entry-delete" onclick="deleteHoursEntry(${e.id})">🗑️</button>
+          <button class="hours-entry-delete" onclick="editHoursEntry('${e.id}')" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
+          <button class="hours-entry-delete" onclick="deleteHoursEntry('${e.id}')">🗑️</button>
         </div>`;
     });
   }
