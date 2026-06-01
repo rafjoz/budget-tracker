@@ -15,11 +15,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
 /* ============================================================
-   SPENDIE v2.9
+   SPENDIE v3.0
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -1613,6 +1612,13 @@ body.dark .quick-add-menu {
    Users will see the banner once until they dismiss it.
    Set back to false after the update period is over.
    ──────────────────────────────────────────────────────────── */
+// ── HTML ESCAPE HELPER (XSS prevention) ─────────────────────
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 const CURRENCIES = [
   { code: 'USD', symbol: '$',  label: 'USD – US Dollar' },
   { code: 'GBP', symbol: '£',  label: 'GBP – British Pound' },
@@ -1688,10 +1694,18 @@ function loadData() {
   } catch(e) { budgets = {}; }
 }
 function saveData() {
-  localStorage.setItem('spendie-data', JSON.stringify(data));
+  try {
+    localStorage.setItem('spendie-data', JSON.stringify(data));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') showSaveToast('⚠️ Storage full — export a backup!');
+  }
 }
 function saveBudgets() {
-  localStorage.setItem('spendie-budgets', JSON.stringify(budgets));
+  try {
+    localStorage.setItem('spendie-budgets', JSON.stringify(budgets));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') showSaveToast('⚠️ Storage full — export a backup!');
+  }
 }
 function fmt(n) {
   const sym = getCurrency().symbol;
@@ -1725,7 +1739,11 @@ function loadRecurring() {
   recSnoozedDate = localStorage.getItem('spendie-rec-snoozed') || '';
 }
 function saveRecurring() {
-  localStorage.setItem('spendie-recurring', JSON.stringify(recurringData));
+  try {
+    localStorage.setItem('spendie-recurring', JSON.stringify(recurringData));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') showSaveToast('⚠️ Storage full — export a backup!');
+  }
 }
 
 function freqLabel(rule) {
@@ -1915,8 +1933,9 @@ function showSuccess(callback) {
 
 /* ── SAVE TOAST ──────────────────────────────────────────────── */
 let toastTimer = null;
-function showSaveToast() {
+function showSaveToast(msg) {
   const toast = document.getElementById('save-toast');
+  toast.textContent = msg || '✓ Saved';
   toast.classList.add('visible');
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
@@ -2023,8 +2042,8 @@ function renderHome() {
         <div class="recurring-item-row">
           <div class="recurring-item-icon" style="background:${cat.color}22;">${cat.icon}</div>
           <div class="recurring-item-info">
-            <div class="recurring-item-label">${r.label}</div>
-            <div class="recurring-item-meta">${freqLabel(r)} · ${cat.label}</div>
+            <div class="recurring-item-label">${esc(r.label)}</div>
+            <div class="recurring-item-meta">${freqLabel(r)} · ${esc(cat.label)}</div>
           </div>
           <div class="recurring-item-amount" style="color:${cls};">${sign}${fmt(r.amount)}</div>
         </div>`;
@@ -2389,7 +2408,7 @@ function saveRecurringRule() {
   const amount = parseFloat(document.getElementById('rec-amount').value);
   const start  = document.getElementById('rec-start').value;
   if (!label)          { alert('Please enter a description.'); return; }
-  if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+  if (!isFinite(amount) || amount <= 0 || amount > 1000000) { alert('Please enter a valid amount (max 1,000,000).'); return; }
   if (!selectedRecCat) { alert('Please select a category.'); return; }
   if (!start)          { alert('Please select a start date.'); return; }
   if (selectedRecFreq === 'monthly') {
@@ -2398,7 +2417,7 @@ function saveRecurringRule() {
     selectedRecDom = dom;
   }
   const rule = {
-    id: Date.now(),
+    id: crypto.randomUUID(),
     label, amount,
     category: selectedRecCat,
     type: selectedRecType,
@@ -2579,8 +2598,8 @@ function txRow(t, cat, showDelete = false) {
   <div class="tx-row">
     <div class="tx-icon" style="background:${cat.color}22;">${cat.icon}</div>
     <div class="tx-info">
-      <div class="tx-label">${t.label || 'Untitled'}</div>
-      <div class="tx-meta">${cat.label} · ${dateStr(t.date)}</div>
+      <div class="tx-label">${esc(t.label) || 'Untitled'}</div>
+      <div class="tx-meta">${esc(cat.label)} · ${dateStr(t.date)}</div>
       ${workHours}
     </div>
     <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
@@ -2700,10 +2719,19 @@ function renderInsights() {
 function buildPie(sorted, total, colors) {
   if (!sorted.length) return '';
   const size = 160; const cx = size/2; const cy = size/2; const r = 60; const inner = 35;
+  // Single category: SVG arc can't draw a full circle — use two circles instead
+  if (sorted.length === 1) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${colors[0]}" opacity=".9"/>
+      <circle cx="${cx}" cy="${cy}" r="${inner}" fill="var(--card)"/>
+    </svg>`;
+  }
   let angle = -Math.PI / 2;
   let slices = '';
   sorted.forEach(([, amt], i) => {
-    const slice = total > 0 ? (amt / total) * Math.PI * 2 : 0;
+    const pct = total > 0 ? amt / total : 0;
+    if (pct < 0.01) return; // skip invisible slivers
+    const slice = pct * Math.PI * 2;
     const x1 = cx + r * Math.cos(angle); const y1 = cy + r * Math.sin(angle);
     const x2 = cx + r * Math.cos(angle + slice); const y2 = cy + r * Math.sin(angle + slice);
     const xi1 = cx + inner * Math.cos(angle); const yi1 = cy + inner * Math.sin(angle);
@@ -2806,7 +2834,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v2.9</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.0</p>`;
 }
 
 function changeName() {
@@ -2935,7 +2963,7 @@ function addTransaction() {
   const amt  = parseFloat(document.getElementById('f-amount').value);
   const desc = document.getElementById('f-desc').value.trim();
   const date = document.getElementById('f-date').value;
-  if (!amt || amt <= 0)   { alert('Please enter a valid amount.'); return; }
+  if (!isFinite(amt) || amt <= 0 || amt > 1000000)   { alert('Please enter a valid amount (max 1,000,000).'); return; }
   if (!desc)              { alert('Please add a description.'); return; }
   if (!selectedCat)       { alert('Please select a category.'); return; }
   if (!date)              { alert('Please select a date.'); return; }
@@ -2945,7 +2973,7 @@ function addTransaction() {
     const tx = arr.find(t => t.id == editingTxId);
     if (tx) { tx.label = desc; tx.amount = amt; tx.category = selectedCat; tx.date = date; }
   } else {
-    const tx = { id: Date.now(), label: desc, amount: amt, category: selectedCat, date };
+    const tx = { id: crypto.randomUUID(), label: desc, amount: amt, category: selectedCat, date };
     if (currentType === 'income') data.income.push(tx);
     else {
       data.expenses.push(tx);
@@ -2982,11 +3010,22 @@ function loadHours() {
     const ci = localStorage.getItem('spendie-clockin');
     if (ci) clockInTime = parseInt(ci);
   } catch(e) { clockInTime = null; }
+  // Restore pending clock-out state if sheet was closed before saving
+  const pcd = localStorage.getItem('spendie-pending-clock-date');
+  const pcdur = localStorage.getItem('spendie-pending-clock-duration');
+  if (pcd && pcdur && !clockInTime) {
+    pendingClockDate = pcd;
+    pendingClockDuration = parseInt(pcdur);
+  }
   if (clockInTime) startCardRefresh();
 }
 
 function saveHours() {
-  localStorage.setItem('spendie-hours', JSON.stringify(hoursData));
+  try {
+    localStorage.setItem('spendie-hours', JSON.stringify(hoursData));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') showSaveToast('⚠️ Storage full — export a backup!');
+  }
 }
 
 // Format duration in minutes → "Xh Ym"
@@ -3133,8 +3172,10 @@ function handleClockOut() {
   localStorage.removeItem('spendie-breaks');
   pendingClockDuration = durationMins;
 
-  // Save date before clearing (used by saveHoursEntry)
+  // Save date before clearing (used by saveHoursEntry) — persisted so sheet close/reopen is safe
   pendingClockDate = localStorage.getItem('spendie-clockin-date') || today();
+  localStorage.setItem('spendie-pending-clock-date', pendingClockDate);
+  localStorage.setItem('spendie-pending-clock-duration', Math.round(durationMins).toString());
 
   // Clear clock in state
   clockInTime = null;
@@ -3183,7 +3224,7 @@ function saveHoursEntry() {
     // From clock in/out
     durationMins = pendingClockDuration;
     const entry = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       date: dateVal,
       project,
       notes,
@@ -3200,7 +3241,7 @@ function saveHoursEntry() {
     durationMins = (eh * 60 + em) - (sh * 60 + sm);
     if (durationMins <= 0) { alert('End time must be after start time.'); return; }
     const entry = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       date: dateVal,
       project,
       notes,
@@ -3210,6 +3251,10 @@ function saveHoursEntry() {
   }
 
   saveHours();
+  pendingClockDate = '';
+  pendingClockDuration = 0;
+  localStorage.removeItem('spendie-pending-clock-date');
+  localStorage.removeItem('spendie-pending-clock-duration');
   showSaveToast();
   closeHoursSheet();
   if (currentPage === 'hours') renderHoursPage();
@@ -3366,8 +3411,8 @@ function renderHoursPage() {
           <div class="hours-entry">
             <div class="hours-entry-icon">🕐</div>
             <div class="hours-entry-info">
-              <div class="hours-entry-project">${e.project}</div>
-              <div class="hours-entry-meta">${e.notes || 'No notes'}</div>
+              <div class="hours-entry-project">${esc(e.project)}</div>
+              <div class="hours-entry-meta">${esc(e.notes) || 'No notes'}</div>
             </div>
             <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
             <button class="hours-entry-delete" onclick="editHoursEntry(${e.id})" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
@@ -3447,8 +3492,8 @@ function renderHoursCard() {
         <div class="hours-entry">
           <div class="hours-entry-icon">🕐</div>
           <div class="hours-entry-info">
-            <div class="hours-entry-project">${e.project}</div>
-            <div class="hours-entry-meta">${dayDateStr(e.date)}${e.notes ? ' · ' + e.notes : ''}</div>
+            <div class="hours-entry-project">${esc(e.project)}</div>
+            <div class="hours-entry-meta">${dayDateStr(e.date)}${e.notes ? ' · ' + esc(e.notes) : ''}</div>
           </div>
           <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
           <button class="hours-entry-delete" onclick="editHoursEntry(${e.id})" style="opacity:.5;font-size:13px;" title="Edit">✏️</button>
@@ -3491,7 +3536,15 @@ function closeExportSheet() { document.getElementById('exp-overlay').classList.r
 
 function getFilename(ext) { return `spendie-report-${today()}.${ext}`; }
 
-function exportExcel() {
+async function exportExcel() {
+  if (!window.XLSX) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
   const wb = XLSX.utils.book_new();
   const incRows = [['Date','Description','Category','Amount']].concat(data.income.map(t => [t.date, t.label, catInfo('income',t.category).label, t.amount]));
   const expRows = [['Date','Description','Category','Amount']].concat(data.expenses.map(t => [t.date, t.label, catInfo('expense',t.category).label, t.amount]));
@@ -3568,9 +3621,19 @@ function startCardRefresh() {
     else { clearInterval(hoursCardInterval); hoursCardInterval = null; }
   }, 60000);
 }
+
+// Pause timers when app is backgrounded (prevents stale intervals on wake)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (hoursCardInterval) { clearInterval(hoursCardInterval); hoursCardInterval = null; }
+    stopTimerDisplay();
+  } else {
+    if (clockInTime) { startCardRefresh(); startTimerDisplay(); }
+  }
+});
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/budget-tracker/sw.js')
+    navigator.serviceWorker.register('./sw.js')
       .then(reg => {
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
@@ -3614,7 +3677,7 @@ function checkForUpdates() {
   statusText.textContent = 'Checking…';
   statusArrow.textContent = '⏳';
 
-  navigator.serviceWorker.getRegistration('/budget-tracker/sw.js').then(reg => {
+  navigator.serviceWorker.getRegistration('./sw.js').then(reg => {
     if (!reg) {
       statusText.textContent = 'Service worker not found';
       statusArrow.textContent = '→';
