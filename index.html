@@ -1862,6 +1862,7 @@ function finishOnboarding(name) {
   const ob = document.getElementById('onboarding');
   ob.classList.add('hidden');
   setTimeout(() => ob.style.display = 'none', 400);
+  renderHome();
 }
 
 function handleObImport(e) {
@@ -1872,17 +1873,33 @@ function handleObImport(e) {
     try {
       const imported = JSON.parse(ev.target.result);
       if (!imported.income || !imported.expenses) { alert('Invalid backup file.'); return; }
+      // Restore all data
       data = { income: imported.income, expenses: imported.expenses, streak: imported.streak || 0, lastTracked: imported.lastTracked || null };
       saveData();
       if (imported.budgets) { budgets = imported.budgets; saveBudgets(); }
       if (imported.hours) { hoursData = imported.hours; saveHours(); }
       if (imported.clockIn) { clockInTime = parseInt(imported.clockIn); localStorage.setItem('spendie-clockin', imported.clockIn); }
       if (imported.recurring) { recurringData = imported.recurring; saveRecurring(); }
-      // Get name from data or prompt
+      // Re-check recurring rules against today
+      checkRecurring();
+      // Restart card refresh if clocked in
+      if (clockInTime) startCardRefresh();
+      // Finish onboarding — show app
       const savedName = localStorage.getItem('spendie-name') || '';
-      finishOnboarding(savedName || 'there');
-      alert('✅ Backup restored successfully!');
-    } catch(err) { alert('Could not read backup file. Make sure it\'s a valid Spendie JSON backup.'); }
+      const n = savedName || 'there';
+      localStorage.setItem('spendie-name', n);
+      localStorage.setItem('spendie-onboarded', '1');
+      updateGreeting(n);
+      // Hide onboarding screen
+      const ob = document.getElementById('onboarding');
+      ob.classList.add('hidden');
+      setTimeout(() => { ob.style.display = 'none'; }, 400);
+      // Render app then show success
+      renderHome();
+      setTimeout(() => showSaveToast('✅ Backup restored!'), 500);
+    } catch(err) {
+      alert('Could not read backup file. Make sure it\'s a valid Spendie JSON backup.');
+    }
   };
   reader.readAsText(file);
 }
@@ -1890,7 +1907,7 @@ function handleObImport(e) {
 function updateGreeting(name) {
   const el = document.getElementById('header-greeting');
   if (name && name !== 'there') {
-    el.innerHTML = `Hi, <span class="hi-name">${name}</span> 👋`;
+    el.innerHTML = `Hi, <span class="hi-name">${esc(name)}</span> 👋`;
     el.classList.add('visible');
   }
 }
@@ -3262,8 +3279,7 @@ function saveHoursEntry() {
 }
 
 function editHoursEntry(id) {
-  <button class="hours-entry-delete" onclick="editHoursEntry('${e.id}')" style="opacity:.5;font-size:1const entry = hoursData.find(e => String(e.id) === String(id));3px;" title="Edit">✏️</button>
-          <button class="hours-entry-delete" onclick="deleteHoursEntry('${e.id}')">🗑️</button>
+  const entry = hoursData.find(e => String(e.id) === String(id));
   if (!entry) return;
 
   editingHoursId = id;
