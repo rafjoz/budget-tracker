@@ -2378,7 +2378,7 @@ function renderRecurringList() {
           <div class="recurring-rule-meta">${freqLabel(r)} · ${cat.label}</div>
         </div>
         <div class="recurring-rule-amount" style="color:${cls};">${sign}${fmt(r.amount)}</div>
-        <button class="tx-delete" onclick="deleteRecurringRule(${r.id})">🗑️</button>
+        <button class="tx-delete" onclick="deleteRecurringRule('${r.id}')">🗑️</button>
       </div>`;
   }).join('');
 }
@@ -2454,10 +2454,10 @@ function saveRecurringRule() {
 }
 function deleteRecurringRule(id) {
   if (!confirm('Delete this recurring transaction?')) return;
-  recurringData = recurringData.filter(r => r.id !== id);
+  recurringData = recurringData.filter(r => String(r.id) !== String(id));
   saveRecurring();
   // Remove from pending too if it was there
-  pendingRecurring = pendingRecurring.filter(r => r.id !== id);
+  pendingRecurring = pendingRecurring.filter(r => String(r.id) !== String(id));
   renderRecurringList();
   showSaveToast();
 }
