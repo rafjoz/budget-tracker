@@ -18,7 +18,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v3.0
+   SPENDIE v3.1
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -612,8 +612,9 @@ body.dark .nav-pill {
   z-index: 201;
   transform: translateY(100%);
   transition: transform .35s cubic-bezier(.32,.72,0,1);
-  max-height: 95vh;
+  max-height: 92vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .sheet.visible { transform: translateY(0); }
 .sheet-handle { width: 40px; height: 4px; border-radius: 99px; background: var(--border); margin: 0 auto 20px; }
@@ -633,7 +634,7 @@ body.dark .nav-pill {
 
 .amount-wrap { position: relative; }
 .amount-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; font-weight: 600; color: var(--text2); }
-.amount-input { padding-left: 32px !important; font-size: 24px !important; font-weight: 700 !important; }
+.amount-input { padding-left: 32px !important; font-size: 16px !important; font-weight: 700 !important; }
 
 /* ── TYPE TOGGLE ────────────────────────────────────────────── */
 .type-toggle { display: flex; background: var(--bg2); border-radius: var(--r-btn); padding: 4px; margin-bottom: 20px; gap: 4px; }
@@ -1270,7 +1271,7 @@ body.dark .quick-add-menu {
 /* ── HIDDEN FILE INPUT ──────────────────────────────────────── */
 #import-file, #ob-import-file { display: none; }
    input, select, textarea {
-  font-size: 16px;
+  font-size: 16px !important;
 }
 </style>
 </head>
@@ -1293,7 +1294,7 @@ body.dark .quick-add-menu {
     </div>
     <button class="ob-btn-primary" onclick="finishOnboarding()">Get Started 🚀</button>
     <p class="ob-import-note" style="margin-top:16px;">
-      Returning user? <a onclick="goToStep(2)">Import your backup →</a>
+      Returning user? <a href="javascript:void(0)" onclick="goToStep(2)">Import your backup →</a>
     </p>
   </div>
 
@@ -1302,9 +1303,9 @@ body.dark .quick-add-menu {
     <div class="ob-logo" style="font-size:28px;">📂</div>
     <h1 class="ob-title">Import<br/>Your Backup</h1>
     <p class="ob-sub" style="margin-bottom:28px;">Select the JSON backup file you exported from Spendie</p>
-    <button class="ob-btn-primary" onclick="document.getElementById('ob-import-file').click()">Choose Backup File</button>
-    <input type="file" id="ob-import-file" accept=".json" onchange="handleObImport(event)"/>
-    <p class="ob-import-note">Don't have a backup? <a onclick="goToStep(1)">Start fresh instead</a></p>
+    <button class="ob-btn-primary" onclick="triggerObImport()">Choose Backup File</button>
+    <input type="file" id="ob-import-file" accept=".json" onchange="handleObImport(event)" style="position:absolute;left:-9999px;"/>
+    <p class="ob-import-note">Don't have a backup? <a href="javascript:void(0)" onclick="goToStep(1)">Start fresh instead</a></p>
     <button class="ob-btn-secondary" onclick="goToStep(1)" style="margin-top:8px;">← Back</button>
   </div>
 
@@ -1912,6 +1913,12 @@ function updateGreeting(name) {
   }
 }
 
+function triggerObImport() {
+  const inp = document.getElementById('ob-import-file');
+  inp.value = '';
+  inp.click();
+}
+
 function checkOnboarding() {
   if (localStorage.getItem('spendie-onboarded') === '1') {
     document.getElementById('onboarding').style.display = 'none';
@@ -2342,6 +2349,10 @@ function showRecurringList() {
 function showRecurringForm() {
   document.getElementById('rec-list-view').style.display = 'none';
   document.getElementById('rec-form-view').style.display = 'block';
+  document.getElementById('rec-sheet').scrollTop = 0;
+  document.getElementById('rec-form-view').dataset.editingId = '';
+  document.getElementById('rec-save-btn').textContent = 'Save Recurring Transaction';
+  document.querySelector('#rec-form-view .sheet-title').textContent = 'New Recurring';
   // Reset form
   selectedRecCat = '';
   selectedRecType = 'expense';
@@ -2374,10 +2385,11 @@ function renderRecurringList() {
       <div class="recurring-rule-row">
         <div class="recurring-rule-icon" style="background:${cat.color}22;">${cat.icon}</div>
         <div class="recurring-rule-info">
-          <div class="recurring-rule-label">${r.label}</div>
-          <div class="recurring-rule-meta">${freqLabel(r)} · ${cat.label}</div>
+          <div class="recurring-rule-label">${esc(r.label)}</div>
+          <div class="recurring-rule-meta">${freqLabel(r)} · ${esc(cat.label)}</div>
         </div>
         <div class="recurring-rule-amount" style="color:${cls};">${sign}${fmt(r.amount)}</div>
+        <button class="tx-delete" title="Edit" onclick="editRecurringRule('${r.id}')">✏️</button>
         <button class="tx-delete" onclick="deleteRecurringRule('${r.id}')">🗑️</button>
       </div>`;
   }).join('');
@@ -2433,25 +2445,70 @@ function saveRecurringRule() {
     if (!dom || dom < 1 || dom > 31) { alert('Please enter a valid day of month (1–31).'); return; }
     selectedRecDom = dom;
   }
-  const rule = {
-    id: crypto.randomUUID(),
-    label, amount,
-    category: selectedRecCat,
-    type: selectedRecType,
-    frequency: selectedRecFreq,
-    dayOfWeek: selectedRecDow,
-    dayOfMonth: selectedRecDom,
-    startDate: start,
-    lastAdded: null,
-    active: true,
-  };
-  recurringData.push(rule);
+  const formView = document.getElementById('rec-form-view');
+  const editingId = formView.dataset.editingId || '';
+  if (editingId) {
+    // Update existing rule
+    const idx = recurringData.findIndex(r => String(r.id) === String(editingId));
+    if (idx !== -1) {
+      recurringData[idx] = { ...recurringData[idx], label, amount, category: selectedRecCat,
+        type: selectedRecType, frequency: selectedRecFreq,
+        dayOfWeek: selectedRecDow, dayOfMonth: selectedRecDom, startDate: start };
+    }
+    formView.dataset.editingId = '';
+  } else {
+    const rule = {
+      id: crypto.randomUUID(),
+      label, amount,
+      category: selectedRecCat,
+      type: selectedRecType,
+      frequency: selectedRecFreq,
+      dayOfWeek: selectedRecDow,
+      dayOfMonth: selectedRecDom,
+      startDate: start,
+      lastAdded: null,
+      active: true,
+    };
+    recurringData.push(rule);
+  }
+  // Reset button/heading for next open
+  document.getElementById('rec-save-btn').textContent = 'Save Recurring Transaction';
+  document.querySelector('#rec-form-view .sheet-title').textContent = 'New Recurring';
   saveRecurring();
-  // Re-check pending in case this rule is already due today
   checkRecurring();
   showRecurringList();
   showSaveToast();
 }
+function editRecurringRule(id) {
+  const rule = recurringData.find(r => String(r.id) === String(id));
+  if (!rule) return;
+  // Switch to form view and pre-fill all fields
+  document.getElementById('rec-list-view').style.display = 'none';
+  document.getElementById('rec-form-view').style.display = 'block';
+  // Mark which rule we're editing
+  document.getElementById('rec-form-view').dataset.editingId = id;
+  document.getElementById('rec-sheet').scrollTop = 0;
+  document.getElementById('rec-label').value = rule.label;
+  document.getElementById('rec-amount').value = rule.amount;
+  document.getElementById('rec-start').value = rule.startDate;
+  document.getElementById('rec-amount-prefix').textContent = getCurrency().symbol;
+  selectedRecType = rule.type;
+  selectedRecCat  = rule.category;
+  selectedRecFreq = rule.frequency;
+  selectedRecDow  = rule.dayOfWeek ?? 1;
+  selectedRecDom  = rule.dayOfMonth ?? 1;
+  setRecType(rule.type);
+  selectRecFreq(rule.frequency);
+  renderRecDowGrid();
+  if (rule.frequency === 'monthly') {
+    document.getElementById('rec-dom').value = rule.dayOfMonth;
+  }
+  // Change save button label
+  document.getElementById('rec-save-btn').textContent = '💾 Update Rule';
+  // Change heading
+  document.querySelector('#rec-form-view .sheet-title').textContent = 'Edit Recurring';
+}
+
 function deleteRecurringRule(id) {
   if (!confirm('Delete this recurring transaction?')) return;
   recurringData = recurringData.filter(r => String(r.id) !== String(id));
@@ -2851,7 +2908,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.0</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.1</p>`;
 }
 
 function changeName() {
@@ -3189,10 +3246,14 @@ function handleClockOut() {
   localStorage.removeItem('spendie-breaks');
   pendingClockDuration = durationMins;
 
-  // Save date before clearing (used by saveHoursEntry) — persisted so sheet close/reopen is safe
+  // Save date and start time before clearing — persisted so sheet close/reopen is safe
   pendingClockDate = localStorage.getItem('spendie-clockin-date') || today();
+  const savedStartTime = new Date(clockInTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   localStorage.setItem('spendie-pending-clock-date', pendingClockDate);
   localStorage.setItem('spendie-pending-clock-duration', Math.round(durationMins).toString());
+  localStorage.setItem('spendie-pending-clock-starttime', savedStartTime);
+  localStorage.setItem('spendie-pending-clock-breakmins', Math.round(breakMins).toString());
+  localStorage.setItem('spendie-pending-clock-endtime', new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
 
   // Clear clock in state
   clockInTime = null;
@@ -3240,12 +3301,17 @@ function saveHoursEntry() {
   } else if (pendingClockDuration > 0) {
     // From clock in/out
     durationMins = pendingClockDuration;
+    const breakMinsLogged = parseInt(localStorage.getItem('spendie-pending-clock-breakmins') || '0');
+    const clockOutTime = Date.now();
     const entry = {
       id: crypto.randomUUID(),
       date: dateVal,
       project,
       notes,
       duration: Math.round(durationMins),
+      startTime: localStorage.getItem('spendie-pending-clock-starttime') || '',
+      endTime: localStorage.getItem('spendie-pending-clock-endtime') || '',
+      breakMins: breakMinsLogged,
     };
     hoursData.unshift(entry);
   } else {
@@ -3263,6 +3329,9 @@ function saveHoursEntry() {
       project,
       notes,
       duration: Math.round(durationMins),
+      startTime: start,
+      endTime: end,
+      breakMins: 0,
     };
     hoursData.unshift(entry);
   }
@@ -3272,6 +3341,9 @@ function saveHoursEntry() {
   pendingClockDuration = 0;
   localStorage.removeItem('spendie-pending-clock-date');
   localStorage.removeItem('spendie-pending-clock-duration');
+  localStorage.removeItem('spendie-pending-clock-starttime');
+  localStorage.removeItem('spendie-pending-clock-breakmins');
+  localStorage.removeItem('spendie-pending-clock-endtime');
   showSaveToast();
   closeHoursSheet();
   if (currentPage === 'hours') renderHoursPage();
@@ -3424,11 +3496,15 @@ function renderHoursPage() {
         </div>
         <div class="card" style="margin-bottom:8px;">`;
       groups[date].forEach(e => {
+        const timeInfo = (e.startTime && e.endTime)
+          ? `${e.startTime} → ${e.endTime}${e.breakMins > 0 ? ` · ${e.breakMins}m break` : ''}`
+          : '';
         html += `
           <div class="hours-entry">
             <div class="hours-entry-icon">🕐</div>
             <div class="hours-entry-info">
               <div class="hours-entry-project">${esc(e.project)}</div>
+              ${timeInfo ? `<div class="hours-entry-meta" style="color:var(--aqua);font-weight:600;">${timeInfo}</div>` : ''}
               <div class="hours-entry-meta">${esc(e.notes) || 'No notes'}</div>
             </div>
             <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
@@ -3505,11 +3581,15 @@ function renderHoursCard() {
       No hours logged yet. Tap Clock In to start!</div>`;
   } else {
     recent.forEach(e => {
+      const eTimeInfo = (e.startTime && e.endTime)
+        ? `${e.startTime} → ${e.endTime}${e.breakMins > 0 ? ` · ${e.breakMins}m break` : ''}`
+        : '';
       entriesHtml += `
         <div class="hours-entry">
           <div class="hours-entry-icon">🕐</div>
           <div class="hours-entry-info">
             <div class="hours-entry-project">${esc(e.project)}</div>
+            ${eTimeInfo ? `<div class="hours-entry-meta" style="color:var(--aqua);font-weight:600;">${eTimeInfo}</div>` : ''}
             <div class="hours-entry-meta">${dayDateStr(e.date)}${e.notes ? ' · ' + esc(e.notes) : ''}</div>
           </div>
           <div class="hours-entry-duration">${fmtDuration(e.duration)}</div>
