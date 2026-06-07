@@ -1864,6 +1864,22 @@ function finishOnboarding(name) {
   ob.classList.add('hidden');
   setTimeout(() => ob.style.display = 'none', 400);
   renderHome();
+  // Ask for notification permission after a short delay so the app is visible first
+  setTimeout(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(perm => {
+        if (perm === 'granted') {
+          // Set sensible defaults
+          localStorage.setItem('spendie-notif-recurring', '1');
+          localStorage.setItem('spendie-notif-clockin', '1');
+          localStorage.setItem('spendie-notif-clockin-time', '09:00');
+          localStorage.setItem('spendie-notif-rec-time', '09:00');
+          showSaveToast('🔔 Notifications enabled!');
+          scheduleNotifications();
+        }
+      });
+    }
+  }, 1500);
 }
 
 function handleObImport(e) {
@@ -2901,6 +2917,31 @@ function renderSettings() {
     </div>
 
     <div class="settings-section">
+      <div class="settings-title">Reminders</div>
+      <div class="settings-row" onclick="requestNotifPermission()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔔</div><div class="settings-row-info"><div class="s-title">Notifications</div><div class="s-sub" id="notif-permission-sub">${getNotifPermissionLabel()}</div></div></div>
+        <div class="settings-row-right" id="notif-permission-arrow">→</div>
+      </div>
+      <div class="settings-row" onclick="toggleRecurringNotif()">
+        <div class="settings-row-left"><div class="settings-row-icon">🔄</div><div class="settings-row-info"><div class="s-title">Recurring Reminders</div><div class="s-sub">Daily alert when transactions are due</div></div></div>
+        <div class="toggle ${localStorage.getItem('spendie-notif-recurring') === '1' ? 'on' : ''}"></div>
+      </div>
+      <div class="settings-row" onclick="toggleClockinNotif()">
+        <div class="settings-row-left"><div class="settings-row-icon">⏰</div><div class="settings-row-info"><div class="s-title">Clock-In Reminder</div><div class="s-sub">Nudge if you forget to clock in</div></div></div>
+        <div class="toggle ${localStorage.getItem('spendie-notif-clockin') === '1' ? 'on' : ''}"></div>
+      </div>
+      ${localStorage.getItem('spendie-notif-clockin') === '1' ? `
+      <div class="settings-row" onclick="changeClockinTime()">
+        <div class="settings-row-left"><div class="settings-row-icon">🕐</div><div class="settings-row-info"><div class="s-title">Reminder Time</div><div class="s-sub">When to send the clock-in nudge</div></div></div>
+        <div class="settings-row-right">${localStorage.getItem('spendie-notif-clockin-time') || '09:00'}</div>
+      </div>` : ''}
+      <div class="settings-row" onclick="changeRecurringTime()">
+        <div class="settings-row-left"><div class="settings-row-icon">🕘</div><div class="settings-row-info"><div class="s-title">Recurring Alert Time</div><div class="s-sub">What time to send the daily reminder</div></div></div>
+        <div class="settings-row-right">${localStorage.getItem('spendie-notif-rec-time') || '09:00'}</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <div class="settings-title">Danger Zone</div>
       <div class="settings-row" onclick="clearAllData()">
         <div class="settings-row-left"><div class="settings-row-icon">🗑️</div><div class="settings-row-info"><div class="s-title">Clear All Data</div><div class="s-sub">This cannot be undone</div></div></div>
@@ -2967,6 +3008,7 @@ function manageBudgets() {
 
 function clearAllData() {
   if (!confirm('Delete ALL data? This cannot be undone.')) return;
+  if (window._notifTimers) { window._notifTimers.forEach(t => clearTimeout(t)); window._notifTimers = []; }
   data = { income: [], expenses: [], streak: 0, lastTracked: null };
   budgets = {};
   hoursData = [];
@@ -3702,6 +3744,181 @@ function importJSON(e) {
   reader.readAsText(file);
 }
 
+/* ── NOTIFICATIONS ───────────────────────────────────────────── */
+
+function getNotifPermissionLabel() {
+  if (!('Notification' in window)) return 'Not supported on this browser';
+  if (Notification.permission === 'granted') return '✅ Enabled — notifications are on';
+  if (Notification.permission === 'denied')  return '❌ Blocked — enable in browser settings';
+  return 'Tap to enable notifications';
+}
+
+function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    alert('Notifications are not supported on this browser.');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    showSaveToast('✅ Notifications already enabled');
+    scheduleNotifications();
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    alert('Notifications are blocked. Please go to your browser/phone settings and allow notifications for this site.');
+    return;
+  }
+  Notification.requestPermission().then(perm => {
+    renderSettings();
+    if (perm === 'granted') {
+      showSaveToast('✅ Notifications enabled!');
+      scheduleNotifications();
+    } else {
+      showSaveToast('Notifications not enabled');
+    }
+  });
+}
+
+function toggleRecurringNotif() {
+  if (Notification.permission !== 'granted') {
+    requestNotifPermission();
+    return;
+  }
+  const current = localStorage.getItem('spendie-notif-recurring') === '1';
+  localStorage.setItem('spendie-notif-recurring', current ? '0' : '1');
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast(current ? 'Recurring reminders off' : '🔔 Recurring reminders on');
+}
+
+function toggleClockinNotif() {
+  if (Notification.permission !== 'granted') {
+    requestNotifPermission();
+    return;
+  }
+  const current = localStorage.getItem('spendie-notif-clockin') === '1';
+  localStorage.setItem('spendie-notif-clockin', current ? '0' : '1');
+  if (!localStorage.getItem('spendie-notif-clockin-time')) {
+    localStorage.setItem('spendie-notif-clockin-time', '09:00');
+  }
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast(current ? 'Clock-in reminder off' : '⏰ Clock-in reminder on');
+}
+
+function changeClockinTime() {
+  const current = localStorage.getItem('spendie-notif-clockin-time') || '09:00';
+  const val = prompt('Clock-in reminder time (24hr format, e.g. 09:30):', current);
+  if (!val) return;
+  const match = val.trim().match(/^([0-1]?\d|2[0-3]):([0-5]\d)$/);
+  if (!match) { alert('Invalid time. Use HH:MM format, e.g. 09:30'); return; }
+  localStorage.setItem('spendie-notif-clockin-time', val.trim());
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast('⏰ Reminder time updated');
+}
+
+function changeRecurringTime() {
+  const current = localStorage.getItem('spendie-notif-rec-time') || '09:00';
+  const val = prompt('Recurring reminder time (24hr format, e.g. 09:00):', current);
+  if (!val) return;
+  const match = val.trim().match(/^([0-1]?\d|2[0-3]):([0-5]\d)$/);
+  if (!match) { alert('Invalid time. Use HH:MM format, e.g. 09:00'); return; }
+  localStorage.setItem('spendie-notif-rec-time', val.trim());
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast('🕘 Alert time updated');
+}
+
+// Core scheduler — called on app open and whenever settings change
+function scheduleNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!('serviceWorker' in navigator)) return;
+
+  const recurringEnabled = localStorage.getItem('spendie-notif-recurring') === '1';
+  const clockinEnabled   = localStorage.getItem('spendie-notif-clockin')   === '1';
+  const recurringTime    = localStorage.getItem('spendie-notif-rec-time')   || '09:00';
+  const clockinTime      = localStorage.getItem('spendie-notif-clockin-time') || '09:00';
+  const hasRecurring     = recurringData.length > 0;
+
+  // Tell SW our current settings (for notificationclick routing)
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active?.postMessage({
+      type: 'SCHEDULE_NOTIFICATIONS',
+      recurringTime, clockinTime, hasRecurring, recurringEnabled, clockinEnabled,
+    });
+  });
+
+  // Cancel any previously scheduled timers for this session
+  if (window._notifTimers) window._notifTimers.forEach(t => clearTimeout(t));
+  window._notifTimers = [];
+
+  const now = new Date();
+
+  // ── Recurring reminder ──────────────────────────────────────
+  if (recurringEnabled && hasRecurring) {
+    const [rh, rm] = recurringTime.split(':').map(Number);
+    const fireAt = new Date(now);
+    fireAt.setHours(rh, rm, 0, 0);
+    if (fireAt <= now) fireAt.setDate(fireAt.getDate() + 1); // next day if already past
+    const delay = fireAt - now;
+
+    const t1 = setTimeout(() => {
+      // Re-check on fire: only notify if there are actually pending items
+      loadRecurring();
+      checkRecurring();
+      if (pendingRecurring.length === 0) return;
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification('💰 Spendie — Transactions Due', {
+          body: `${pendingRecurring.length} recurring transaction${pendingRecurring.length > 1 ? 's' : ''} need${pendingRecurring.length === 1 ? 's' : ''} your confirmation today.`,
+          icon: './Icon.png',
+          badge: './Icon.png',
+          tag: 'recurring-due',
+          requireInteraction: false,
+          data: { url: './' },
+        });
+      });
+    }, delay);
+    window._notifTimers.push(t1);
+  }
+
+  // ── Clock-in reminder ───────────────────────────────────────
+  if (clockinEnabled) {
+    const [ch, cm] = clockinTime.split(':').map(Number);
+    const fireAt = new Date(now);
+    fireAt.setHours(ch, cm, 0, 0);
+    if (fireAt <= now) fireAt.setDate(fireAt.getDate() + 1);
+    const delay = fireAt - now;
+
+    const t2 = setTimeout(() => {
+      // Only fire if not already clocked in today
+      const alreadyClockedIn = !!localStorage.getItem('spendie-clockin');
+      const alreadyLoggedToday = hoursData.some(e => e.date === today());
+      if (alreadyClockedIn || alreadyLoggedToday) return;
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification('⏱️ Spendie — Don\'t Forget to Clock In', {
+          body: 'You haven\'t clocked in yet today. Tap to open Spendie.',
+          icon: './Icon.png',
+          badge: './Icon.png',
+          tag: 'clockin-reminder',
+          requireInteraction: false,
+          data: { url: './' },
+        });
+      });
+    }, delay);
+    window._notifTimers.push(t2);
+  }
+}
+
+// Handle notification tap — route to correct page
+function handleNotifClick(tag) {
+  if (tag === 'recurring-due') {
+    switchPage('home', document.querySelector('[data-page="home"]'));
+  } else if (tag === 'clockin-reminder') {
+    switchPage('hours', document.querySelector('[data-page="hours"]'));
+    setTimeout(() => openHoursSheet(), 300);
+  }
+}
+
 /* ── INIT ────────────────────────────────────────────────────── */
 loadData();
 loadHours();
@@ -3709,6 +3926,20 @@ loadRecurring();
 checkRecurring();
 checkOnboarding();
 renderHome();
+
+// Listen for notification tap messages from service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'NOTIF_CLICK') {
+      handleNotifClick(e.data.tag);
+    }
+  });
+}
+
+// Auto-schedule notifications on every app open (silently, no permission prompt)
+if (Notification.permission === 'granted') {
+  scheduleNotifications();
+}
 
 // Refresh hours card every 60s to keep elapsed time current
 function startCardRefresh() {
