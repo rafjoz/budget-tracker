@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spendie-v3.2';
+const CACHE_NAME = 'spendie-v3.2.1';
 const ASSETS = ['./', './index.html', './manifest.json', './Icon.png', './Logo.png'];
 
 // ── INSTALL ──────────────────────────────────────────────────
