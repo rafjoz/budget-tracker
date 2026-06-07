@@ -2938,7 +2938,7 @@ function renderSettings() {
       <div style="margin-top:6px;">
         ${jobsData.map(j => `
           <div class="settings-row" style="margin-bottom:6px;">
-            <div class="settings-row-left"><div class="settings-row-icon">💼</div><div class="settings-row-info"><div class="s-title">${esc(j.name)}</div><div class="s-sub">Clock-in reminder at ${j.time}</div></div></div>
+            <div class="settings-row-left"><div class="settings-row-icon">💼</div><div class="settings-row-info"><div class="s-title">${esc(j.name)}</div><div class="s-sub">⏰ ${j.time} · ${j.days && j.days.length > 0 ? fmtJobDays(j.days) : 'Every day'}</div></div></div>
             <div style="display:flex;gap:8px;align-items:center;">
               <span style="font-size:12px;color:var(--text3);cursor:pointer;" onclick="editJob('${j.id}')">✏️</span>
               <span style="font-size:12px;color:var(--red);cursor:pointer;opacity:.7;" onclick="deleteJob('${j.id}')">🗑️</span>
@@ -3846,6 +3846,24 @@ function changeClockinTime() {
   showSaveToast('⏰ Reminder time updated');
 }
 
+function parseDaysInput(input) {
+  // Returns array of JS day numbers (0=Sun,1=Mon...6=Sat)
+  // Input uses 1=Mon...7=Sun for user friendliness
+  if (!input || !input.trim()) return []; // empty = every day
+  const map = { '1':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':0 };
+  return input.split(',')
+    .map(s => s.trim())
+    .filter(s => map[s] !== undefined)
+    .map(s => map[s]);
+}
+
+function fmtJobDays(days) {
+  const names = { 0:'Sun', 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat' };
+  // Sort by Mon-Sun order for display (1,2,3,4,5,6,0)
+  const order = [1,2,3,4,5,6,0];
+  return order.filter(d => days.includes(d)).map(d => names[d]).join(', ');
+}
+
 function addJob() {
   const name = prompt('Job name (e.g. Café Job, Office, Freelance):');
   if (!name || !name.trim()) return;
@@ -3853,7 +3871,9 @@ function addJob() {
   if (!time) return;
   const match = time.trim().match(/^([0-1]?\d|2[0-3]):([0-5]\d)$/);
   if (!match) { alert('Invalid time. Use HH:MM format, e.g. 08:30'); return; }
-  jobsData.push({ id: crypto.randomUUID(), name: name.trim(), time: time.trim() });
+  const daysInput = prompt('Which days? Enter numbers separated by commas:\n1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun\n\nExample: 1,2,3,4,5 for weekdays\nLeave blank for every day.', '1,2,3,4,5');
+  const days = parseDaysInput(daysInput);
+  jobsData.push({ id: crypto.randomUUID(), name: name.trim(), time: time.trim(), days });
   saveJobs();
   renderSettings();
   scheduleNotifications();
@@ -3869,8 +3889,11 @@ function editJob(id) {
   if (!time) return;
   const match = time.trim().match(/^([0-1]?\d|2[0-3]):([0-5]\d)$/);
   if (!match) { alert('Invalid time. Use HH:MM format, e.g. 08:30'); return; }
+  const currentDays = job.days && job.days.length > 0 ? job.days.join(',') : '';
+  const daysInput = prompt('Which days? Enter numbers separated by commas:\n1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun\n\nExample: 1,2,3,4,5 for weekdays\nLeave blank for every day.', currentDays);
   job.name = name.trim();
   job.time = time.trim();
+  job.days = parseDaysInput(daysInput);
   saveJobs();
   renderSettings();
   scheduleNotifications();
@@ -3965,7 +3988,10 @@ function scheduleNotifications() {
       if (fireAt <= now) fireAt.setDate(fireAt.getDate() + 1);
       const delay = fireAt - now;
 
+      const jobDays = job.days || [];
       const t2 = setTimeout(() => {
+        // Check if today is a scheduled day for this job (empty = every day)
+        if (jobDays.length > 0 && !jobDays.includes(new Date().getDay())) return;
         const alreadyClockedIn = !!localStorage.getItem('spendie-clockin');
         const alreadyLoggedToday = hoursData.some(e => e.date === today());
         if (alreadyClockedIn || alreadyLoggedToday) return;
