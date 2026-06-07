@@ -1274,6 +1274,54 @@ body.dark .quick-add-menu {
   font-size: 16px !important;
 }
 
+/* ── SHORTCUT ROW ───────────────────────────────────────────── */
+.shortcut-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.shortcut-row::-webkit-scrollbar { display: none; }
+.shortcut-btn {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+  box-shadow: var(--shadow-sm);
+  min-width: 72px;
+  -webkit-tap-highlight-color: transparent;
+}
+.shortcut-btn:hover { border-color: var(--aqua); box-shadow: 0 4px 16px rgba(49,198,227,.15); }
+.shortcut-btn:active { transform: scale(.94); }
+.shortcut-btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.shortcut-btn-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 /* ── WELCOME PANEL ──────────────────────────────────────────── */
 .welcome-panel {
   margin-bottom: 18px;
@@ -1695,7 +1743,6 @@ function esc(s) {
 }
 
 let balanceHidden = true; // resets to hidden on every app open
-let welcomePanelDismissed = false; // resets on every app open
 
 function toggleBalanceVisibility() {
   balanceHidden = !balanceHidden;
@@ -2193,49 +2240,44 @@ function renderHome() {
       </div>`;
   }
 
-  // Welcome panel
-  let welcomeHtml = '';
-  if (!welcomePanelDismissed) {
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    const name = localStorage.getItem('spendie-name') || '';
-    const greetLine = name && name !== 'there' ? `${greeting}, ${name.split(' ')[0]}!` : `${greeting}!`;
-    welcomeHtml = `
-      <div class="welcome-panel">
-        <div class="welcome-panel-title">
-          <span>✨ ${greetLine}</span>
-          <span class="welcome-dismiss" onclick="welcomePanelDismissed=true;renderHome();">✕ Dismiss</span>
-        </div>
-        <div class="welcome-cards-row">
-          <div class="welcome-card" onclick="switchPage('tx', document.querySelector('[data-page=tx]'))">
-            <div class="welcome-card-icon" style="background:rgba(255,107,107,.12);">💸</div>
-            <div class="welcome-card-label">Transactions</div>
-            <div class="welcome-card-sub">View &amp; add</div>
-          </div>
-          <div class="welcome-card" onclick="openHoursSheet()">
-            <div class="welcome-card-icon" style="background:rgba(49,198,227,.12);">⏱️</div>
-            <div class="welcome-card-label">Work Hours</div>
-            <div class="welcome-card-sub">${clockInTime ? 'Clocked in' : 'Clock in'}</div>
-          </div>
-          <div class="welcome-card" onclick="switchPage('insights', document.querySelector('[data-page=insights]'))">
-            <div class="welcome-card-icon" style="background:rgba(126,224,129,.12);">📊</div>
-            <div class="welcome-card-label">Insights</div>
-            <div class="welcome-card-sub">Spending trends</div>
-          </div>
-        </div>
-      </div>`;
-  }
+  const shortcutRow = `
+    <div class="shortcut-row">
+      <button class="shortcut-btn" onclick="openAddSheet()">
+        <div class="shortcut-btn-icon" style="background:rgba(255,107,107,.12);">💸</div>
+        <div class="shortcut-btn-label">Add Expense</div>
+      </button>
+      <button class="shortcut-btn" onclick="setType('income');openAddSheet();">
+        <div class="shortcut-btn-icon" style="background:rgba(52,211,153,.12);">💵</div>
+        <div class="shortcut-btn-label">Add Income</div>
+      </button>
+      <button class="shortcut-btn" onclick="openHoursSheet()">
+        <div class="shortcut-btn-icon" style="background:rgba(49,198,227,.12);">⏱️</div>
+        <div class="shortcut-btn-label">${clockInTime ? 'Clock Out' : 'Clock In'}</div>
+      </button>
+      <button class="shortcut-btn" onclick="openRecurringSheet()">
+        <div class="shortcut-btn-icon" style="background:rgba(167,139,250,.12);">🔄</div>
+        <div class="shortcut-btn-label">Recurring</div>
+      </button>
+      <button class="shortcut-btn" onclick="switchPage('insights', document.querySelector('[data-page=insights]'))">
+        <div class="shortcut-btn-icon" style="background:rgba(126,224,129,.12);">📊</div>
+        <div class="shortcut-btn-label">Insights</div>
+      </button>
+      <button class="shortcut-btn" onclick="openExportSheet()">
+        <div class="shortcut-btn-icon" style="background:rgba(250,204,21,.12);">📤</div>
+        <div class="shortcut-btn-label">Export</div>
+      </button>
+    </div>`;
 
-  let html = `${welcomeHtml}${pendingBannerHtml}
+  let html = `${shortcutRow}${pendingBannerHtml}
     <div class="card hero-card">
       <div class="hero-month">${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div class="hero-label">Total Balance</div>
-        <button onclick="toggleBalanceVisibility()" style="background:rgba(255,255,255,.2);border:none;border-radius:20px;padding:4px 10px;cursor:pointer;font-size:13px;color:#fff;font-weight:600;display:flex;align-items:center;gap:4px;">
-          ${balanceHidden ? '👁️ Show' : '🙈 Hide'}
+      <div class="hero-label">Total Balance</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:2px;">
+        <div class="hero-balance" style="margin-bottom:0;">${fmtPrivate(balance)}</div>
+        <button onclick="event.stopPropagation();toggleBalanceVisibility();" style="background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
+          ${balanceHidden ? '👁️' : '🙈'}
         </button>
       </div>
-      <div class="hero-balance">${fmtPrivate(balance)}</div>
       <div class="hero-divider"></div>
       <div class="hero-stats-row">
         <div class="hero-stat">
