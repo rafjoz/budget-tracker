@@ -18,7 +18,7 @@
 
 <style>
 /* ============================================================
-   SPENDIE v3.1
+   SPENDIE v3.2
    ============================================================ */
 
 /* ── UPDATE BANNER CONTROL ─────────────────────────────────── */
@@ -2932,8 +2932,22 @@ function renderSettings() {
       </div>
       ${localStorage.getItem('spendie-notif-clockin') === '1' ? `
       <div class="settings-row" onclick="changeClockinTime()">
-        <div class="settings-row-left"><div class="settings-row-icon">🕐</div><div class="settings-row-info"><div class="s-title">Reminder Time</div><div class="s-sub">When to send the clock-in nudge</div></div></div>
+        <div class="settings-row-left"><div class="settings-row-icon">🕐</div><div class="settings-row-info"><div class="s-title">Default Reminder Time</div><div class="s-sub">Used when no jobs are defined below</div></div></div>
         <div class="settings-row-right">${localStorage.getItem('spendie-notif-clockin-time') || '09:00'}</div>
+      </div>
+      <div style="margin-top:6px;">
+        ${jobsData.map(j => `
+          <div class="settings-row" style="margin-bottom:6px;">
+            <div class="settings-row-left"><div class="settings-row-icon">💼</div><div class="settings-row-info"><div class="s-title">${esc(j.name)}</div><div class="s-sub">Clock-in reminder at ${j.time}</div></div></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:12px;color:var(--text3);cursor:pointer;" onclick="editJob('${j.id}')">✏️</span>
+              <span style="font-size:12px;color:var(--red);cursor:pointer;opacity:.7;" onclick="deleteJob('${j.id}')">🗑️</span>
+            </div>
+          </div>`).join('')}
+        <div class="settings-row" onclick="addJob()" style="border-style:dashed;margin-bottom:6px;">
+          <div class="settings-row-left"><div class="settings-row-icon">➕</div><div class="settings-row-info"><div class="s-title">Add Job</div><div class="s-sub">Set a name and reminder time</div></div></div>
+          <div class="settings-row-right">→</div>
+        </div>
       </div>` : ''}
       <div class="settings-row" onclick="changeRecurringTime()">
         <div class="settings-row-left"><div class="settings-row-icon">🕘</div><div class="settings-row-info"><div class="s-title">Recurring Alert Time</div><div class="s-sub">What time to send the daily reminder</div></div></div>
@@ -2949,7 +2963,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.1</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.2</p>`;
 }
 
 function changeName() {
@@ -3115,6 +3129,21 @@ let clockTimerInterval = null;
 let pendingClockDuration = 0; // minutes from clock-out
 let pendingClockDate = ''; // date string saved at clock-out
 let editingHoursId = null; // id of entry being edited, null if new
+let jobsData = [];
+
+function loadJobs() {
+  try {
+    const raw = localStorage.getItem('spendie-jobs');
+    if (raw) jobsData = JSON.parse(raw);
+  } catch(e) { jobsData = []; }
+}
+function saveJobs() {
+  try {
+    localStorage.setItem('spendie-jobs', JSON.stringify(jobsData));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') showSaveToast('⚠️ Storage full — export a backup!');
+  }
+}
 
 // Load / Save
 function loadHours() {
@@ -3817,6 +3846,46 @@ function changeClockinTime() {
   showSaveToast('⏰ Reminder time updated');
 }
 
+function addJob() {
+  const name = prompt('Job name (e.g. Café Job, Office, Freelance):');
+  if (!name || !name.trim()) return;
+  const time = prompt('Reminder time for this job (24hr format, e.g. 08:00):', '09:00');
+  if (!time) return;
+  const match = time.trim().match(/^([0-1]?\d|2[0-3]):([0-5]\d)$/);
+  if (!match) { alert('Invalid time. Use HH:MM format, e.g. 08:30'); return; }
+  jobsData.push({ id: crypto.randomUUID(), name: name.trim(), time: time.trim() });
+  saveJobs();
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast('💼 Job added!');
+}
+
+function editJob(id) {
+  const job = jobsData.find(j => j.id === id);
+  if (!job) return;
+  const name = prompt('Job name:', job.name);
+  if (!name || !name.trim()) return;
+  const time = prompt('Reminder time (24hr format, e.g. 08:00):', job.time);
+  if (!time) return;
+  const match = time.trim().match(/^([0-1]?\d|2[0-3]):([0-5]\d)$/);
+  if (!match) { alert('Invalid time. Use HH:MM format, e.g. 08:30'); return; }
+  job.name = name.trim();
+  job.time = time.trim();
+  saveJobs();
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast('💼 Job updated!');
+}
+
+function deleteJob(id) {
+  if (!confirm('Remove this job?')) return;
+  jobsData = jobsData.filter(j => j.id !== id);
+  saveJobs();
+  renderSettings();
+  scheduleNotifications();
+  showSaveToast('Job removed');
+}
+
 function changeRecurringTime() {
   const current = localStorage.getItem('spendie-notif-rec-time') || '09:00';
   const val = prompt('Recurring reminder time (24hr format, e.g. 09:00):', current);
@@ -3881,41 +3950,62 @@ function scheduleNotifications() {
     window._notifTimers.push(t1);
   }
 
-  // ── Clock-in reminder ───────────────────────────────────────
+  // ── Clock-in reminder(s) ────────────────────────────────────
   if (clockinEnabled) {
-    const [ch, cm] = clockinTime.split(':').map(Number);
-    const fireAt = new Date(now);
-    fireAt.setHours(ch, cm, 0, 0);
-    if (fireAt <= now) fireAt.setDate(fireAt.getDate() + 1);
-    const delay = fireAt - now;
+    // If jobs are defined, fire one notification per job at its own time
+    // Otherwise fall back to the single default reminder time
+    const jobsToNotify = jobsData.length > 0
+      ? jobsData.map(j => ({ name: j.name, time: j.time, tag: 'clockin-job-' + j.id }))
+      : [{ name: '', time: clockinTime, tag: 'clockin-reminder' }];
 
-    const t2 = setTimeout(() => {
-      // Only fire if not already clocked in today
-      const alreadyClockedIn = !!localStorage.getItem('spendie-clockin');
-      const alreadyLoggedToday = hoursData.some(e => e.date === today());
-      if (alreadyClockedIn || alreadyLoggedToday) return;
-      navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification('⏱️ Spendie — Don\'t Forget to Clock In', {
-          body: 'You haven\'t clocked in yet today. Tap to open Spendie.',
-          icon: './Icon.png',
-          badge: './Icon.png',
-          tag: 'clockin-reminder',
-          requireInteraction: false,
-          data: { url: './' },
+    jobsToNotify.forEach(job => {
+      const [ch, cm] = job.time.split(':').map(Number);
+      const fireAt = new Date(now);
+      fireAt.setHours(ch, cm, 0, 0);
+      if (fireAt <= now) fireAt.setDate(fireAt.getDate() + 1);
+      const delay = fireAt - now;
+
+      const t2 = setTimeout(() => {
+        const alreadyClockedIn = !!localStorage.getItem('spendie-clockin');
+        const alreadyLoggedToday = hoursData.some(e => e.date === today());
+        if (alreadyClockedIn || alreadyLoggedToday) return;
+        const title = job.name
+          ? `⏱️ Time to clock in for ${job.name}`
+          : '⏱️ Spendie — Don\'t Forget to Clock In';
+        const body = job.name
+          ? `Your ${job.name} shift is starting. Tap to clock in.`
+          : 'You haven\'t clocked in yet today. Tap to open Spendie.';
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(title, {
+            body,
+            icon: './Icon.png',
+            badge: './Icon.png',
+            tag: job.tag,
+            requireInteraction: false,
+            data: { url: './', jobName: job.name },
+          });
         });
-      });
-    }, delay);
-    window._notifTimers.push(t2);
+      }, delay);
+      window._notifTimers.push(t2);
+    });
   }
 }
 
 // Handle notification tap — route to correct page
-function handleNotifClick(tag) {
+function handleNotifClick(tag, jobName) {
   if (tag === 'recurring-due') {
     switchPage('home', document.querySelector('[data-page="home"]'));
-  } else if (tag === 'clockin-reminder') {
+  } else if (tag === 'clockin-reminder' || tag.startsWith('clockin-job-')) {
     switchPage('hours', document.querySelector('[data-page="hours"]'));
-    setTimeout(() => openHoursSheet(), 300);
+    setTimeout(() => {
+      openHoursSheet();
+      if (jobName) {
+        setTimeout(() => {
+          const projectField = document.getElementById('h-project');
+          if (projectField) projectField.value = jobName;
+        }, 100);
+      }
+    }, 300);
   }
 }
 
@@ -3923,6 +4013,7 @@ function handleNotifClick(tag) {
 loadData();
 loadHours();
 loadRecurring();
+loadJobs();
 checkRecurring();
 checkOnboarding();
 renderHome();
@@ -3931,7 +4022,7 @@ renderHome();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data?.type === 'NOTIF_CLICK') {
-      handleNotifClick(e.data.tag);
+      handleNotifClick(e.data.tag, e.data.jobName);
     }
   });
 }

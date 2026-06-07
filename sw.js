@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spendie-v3.1';
+const CACHE_NAME = 'spendie-v3.2';
 const ASSETS = ['./', './index.html', './manifest.json', './Icon.png', './Logo.png'];
 
 // ── INSTALL ──────────────────────────────────────────────────
@@ -47,7 +47,7 @@ self.addEventListener('notificationclick', e => {
       if (list.length > 0) {
         const client = list[0];
         client.focus();
-        client.postMessage({ type: 'NOTIF_CLICK', tag: e.notification.tag });
+        client.postMessage({ type: 'NOTIF_CLICK', tag: e.notification.tag, jobName: e.notification.data?.jobName || '' });
       } else {
         clients.openWindow('./');
       }
