@@ -1254,6 +1254,30 @@ body.dark .quick-add-menu {
 }
 .freq-btn.selected { border-color: var(--aqua); background: rgba(49,198,227,.08); color: var(--aqua); }
 
+/* ── RECURRING ACTIVE TOGGLE ── */
+.rec-active-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background .2s, transform .15s;
+}
+.rec-active-toggle:active { transform: scale(.9); }
+.rec-active-toggle.active {
+  background: rgba(52,211,153,.15);
+  color: #34D399;
+}
+.rec-active-toggle.paused {
+  background: rgba(148,163,184,.15);
+  color: var(--text3);
+}
+
 /* ── BUDGET ALERT TOAST ── */
 .budget-toast {
   position: fixed;
@@ -1934,6 +1958,7 @@ let editingTxId = null;
 let editingTxType = null;
 let recurringData = [];
 let pendingRecurring = [];
+let pendingRecurringSkipped = new Set();
 let recSnoozedDate = '';
 let selectedRecCat = '';
 let selectedRecType = 'expense';
@@ -2355,7 +2380,13 @@ function renderHome() {
       const sign = r.type === 'income' ? '+' : '-';
       const cls  = r.type === 'income' ? 'var(--green)' : 'var(--red)';
       itemsHtml += `
-        <div class="recurring-item-row">
+        <div class="recurring-item-row" id="rec-pending-row-${r.id}"
+          onclick="toggleRecurringCheck('${r.id}')" style="cursor:pointer;">
+          <div style="width:20px;height:20px;border-radius:6px;border:2px solid var(--aqua);
+            background:rgba(49,198,227,.12);display:flex;align-items:center;justify-content:center;
+            flex-shrink:0;font-size:12px;transition:background .15s;" id="rec-check-${r.id}">
+            ✓
+          </div>
           <div class="recurring-item-icon" style="background:${cat.color}22;">${cat.icon}</div>
           <div class="recurring-item-info">
             <div class="recurring-item-label">${esc(r.label)}</div>
@@ -2371,12 +2402,12 @@ function renderHome() {
           <div class="recurring-banner-icon">🔄</div>
           <div>
             <div class="recurring-banner-title">${total} recurring transaction${total > 1 ? 's' : ''} due today</div>
-            <div class="recurring-banner-sub">Review and confirm to add them</div>
+            <div class="recurring-banner-sub">Tap to deselect any you want to skip</div>
           </div>
         </div>
         ${itemsHtml}
         <div class="recurring-banner-actions">
-          <button class="recurring-confirm-btn" onclick="confirmRecurring()">✓ Add All Now</button>
+          <button class="recurring-confirm-btn" onclick="confirmRecurring()">✓ Add Selected</button>
           <button class="recurring-dismiss-btn" onclick="dismissRecurring()">Later</button>
         </div>
       </div>`;
@@ -2537,14 +2568,18 @@ function renderHome() {
 /* ── RECURRING ACTIONS ── */
 function confirmRecurring() {
   const todayStr = today();
-  pendingRecurring.forEach(r => {
-    const tx = { id: Date.now() + Math.random(), label: r.label, amount: r.amount, category: r.category, date: todayStr };
+  const toAdd = pendingRecurring.filter(r => !pendingRecurringSkipped.has(String(r.id)));
+  if (toAdd.length === 0) {
+    showSaveToast('⚠️ No items selected');
+    return;
+  }
+  toAdd.forEach(r => {
+    const tx = { id: crypto.randomUUID(), label: r.label, amount: r.amount, category: r.category, date: todayStr };
     if (r.type === 'income') data.income.push(tx);
     else {
       data.expenses.push(tx);
       checkBudgetAlerts(r.category);
     }
-    // Update lastAdded on the rule
     const rule = recurringData.find(x => x.id === r.id);
     if (rule) rule.lastAdded = todayStr;
   });
@@ -2552,7 +2587,8 @@ function confirmRecurring() {
   saveData();
   saveRecurring();
   pendingRecurring = [];
-  showSaveToast();
+  pendingRecurringSkipped.clear();
+  showSaveToast(`✓ Added ${toAdd.length} transaction${toAdd.length > 1 ? 's' : ''}`);
   renderHome();
 }
 
@@ -2561,6 +2597,7 @@ function dismissRecurring() {
   recSnoozedDate = todayStr;
   localStorage.setItem('spendie-rec-snoozed', todayStr);
   pendingRecurring = [];
+  pendingRecurringSkipped.clear();
   renderHome();
   showSaveToast("⏰ We'll remind you again tomorrow");
 }
@@ -2572,6 +2609,7 @@ let txDatePreset = '';
 let hrDateStart = '';
 let hrDateEnd = '';
 let hrDatePreset = '';
+let insightsPeriod = 'all'; // 'all' | 'thisMonth' | 'lastMonth' | 'YYYY-MM'
 
 function buildDateFilterBar(idPrefix, startVal, endVal, preset, onApply, onClear) {
   const hasFilter = !!(startVal || endVal);
@@ -2707,14 +2745,26 @@ function renderRecurringList() {
     const cat = catInfo(r.type, r.category);
     const sign = r.type === 'income' ? '+' : '-';
     const cls  = r.type === 'income' ? 'var(--green)' : 'var(--red)';
+    const isActive = r.active !== false;
+    const lastFired = r.lastAdded
+      ? `Last added ${dateStr(r.lastAdded)}`
+      : 'Never added yet';
     return `
-      <div class="recurring-rule-row">
+      <div class="recurring-rule-row" style="opacity:${isActive ? '1' : '0.55'};">
         <div class="recurring-rule-icon" style="background:${cat.color}22;">${cat.icon}</div>
         <div class="recurring-rule-info">
           <div class="recurring-rule-label">${esc(r.label)}</div>
           <div class="recurring-rule-meta">${freqLabel(r)} · ${esc(cat.label)}</div>
+          <div class="recurring-rule-meta" style="color:${isActive ? 'var(--aqua)' : 'var(--text3)'};">
+            ${isActive ? '▶ Active' : '⏸ Paused'} · ${lastFired}
+          </div>
         </div>
         <div class="recurring-rule-amount" style="color:${cls};">${sign}${fmt(r.amount)}</div>
+        <button class="rec-active-toggle ${isActive ? 'active' : 'paused'}"
+          title="${isActive ? 'Pause' : 'Resume'}"
+          onclick="toggleRecurringActive('${r.id}')">
+          ${isActive ? '▶' : '⏸'}
+        </button>
         <button class="tx-delete" title="Edit" onclick="editRecurringRule('${r.id}')">✏️</button>
         <button class="tx-delete" onclick="deleteRecurringRule('${r.id}')">🗑️</button>
       </div>`;
@@ -2833,6 +2883,35 @@ function editRecurringRule(id) {
   document.getElementById('rec-save-btn').textContent = '💾 Update Rule';
   // Change heading
   document.querySelector('#rec-form-view .sheet-title').textContent = 'Edit Recurring';
+}
+
+function toggleRecurringCheck(id) {
+  const checkEl = document.getElementById('rec-check-' + id);
+  const rowEl   = document.getElementById('rec-pending-row-' + id);
+  if (!checkEl || !rowEl) return;
+  if (pendingRecurringSkipped.has(id)) {
+    pendingRecurringSkipped.delete(id);
+    checkEl.style.background = 'rgba(49,198,227,.12)';
+    checkEl.style.borderColor = 'var(--aqua)';
+    checkEl.textContent = '✓';
+    rowEl.style.opacity = '1';
+  } else {
+    pendingRecurringSkipped.add(id);
+    checkEl.style.background = 'var(--bg2)';
+    checkEl.style.borderColor = 'var(--border)';
+    checkEl.textContent = '';
+    rowEl.style.opacity = '0.4';
+  }
+}
+
+function toggleRecurringActive(id) {
+  const rule = recurringData.find(r => String(r.id) === String(id));
+  if (!rule) return;
+  rule.active = rule.active === false ? true : false;
+  saveRecurring();
+  checkRecurring();
+  renderRecurringList();
+  showSaveToast(rule.active ? '▶ Rule resumed' : '⏸ Rule paused');
 }
 
 function deleteRecurringRule(id) {
@@ -3037,40 +3116,111 @@ function deleteTransaction(type, id) {
 }
 
 /* ── INSIGHTS ────────────────────────────────────────────────── */
+function getInsightsPeriodRange() {
+  // Returns { start, end } YYYY-MM-DD strings, or null for all-time
+  if (insightsPeriod === 'all') return null;
+  if (insightsPeriod === 'thisMonth') return getMonthRange(0);
+  if (insightsPeriod === 'lastMonth') return getMonthRange(-1);
+  // Custom YYYY-MM
+  const [y, m] = insightsPeriod.split('-').map(Number);
+  const start = new Date(y, m - 1, 1);
+  const end   = new Date(y, m, 0);
+  return { start: dateToStr(start), end: dateToStr(end) };
+}
+
+function buildInsightsPeriodSelector() {
+  // Build list of months that have transactions
+  const monthSet = new Set([
+    ...data.income.map(t => t.date.slice(0, 7)),
+    ...data.expenses.map(t => t.date.slice(0, 7)),
+  ]);
+  const months = [...monthSet].sort((a, b) => b.localeCompare(a)).slice(0, 12);
+  const options = [
+    { key: 'all',       label: 'All Time' },
+    { key: 'thisMonth', label: 'This Month' },
+    { key: 'lastMonth', label: 'Last Month' },
+    ...months.map(m => ({
+      key: m,
+      label: new Date(m + '-01T12:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    }))
+  ];
+  // Deduplicate (thisMonth/lastMonth may overlap with month list)
+  const seen = new Set();
+  const unique = options.filter(o => {
+    if (seen.has(o.key)) return false;
+    seen.add(o.key);
+    return true;
+  });
+  return `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      ${unique.map(o => `
+        <button onclick="setInsightsPeriod('${o.key}')"
+          style="padding:7px 14px;border-radius:var(--r-pill);font-size:12px;font-weight:600;
+          border:1.5px solid ${insightsPeriod === o.key ? 'transparent' : 'var(--border)'};
+          background:${insightsPeriod === o.key ? 'var(--gradient)' : 'var(--card)'};
+          color:${insightsPeriod === o.key ? '#fff' : 'var(--text2)'};
+          cursor:pointer;font-family:Inter,sans-serif;transition:all .15s;
+          white-space:nowrap;">
+          ${o.label}
+        </button>`).join('')}
+    </div>`;
+}
+
+function setInsightsPeriod(key) {
+  insightsPeriod = key;
+  renderInsights();
+}
+
 function renderInsights() {
-  const totalIncome  = data.income.reduce((s, t) => s + t.amount, 0);
-  const totalExpense = data.expenses.reduce((s, t) => s + t.amount, 0);
-  const net = totalIncome - totalExpense;
+  const range = getInsightsPeriodRange();
+  const filterFn = range
+    ? t => inRange(t.date, range.start, range.end)
+    : () => true;
+
+  const filteredIncome   = data.income.filter(filterFn);
+  const filteredExpenses = data.expenses.filter(filterFn);
+
+  const totalIncome  = filteredIncome.reduce((s, t) => s + t.amount, 0);
+  const totalExpense = filteredExpenses.reduce((s, t) => s + t.amount, 0);
+  const net  = totalIncome - totalExpense;
   const rate = totalIncome > 0 ? ((net / totalIncome) * 100).toFixed(1) : 0;
 
-  if (data.expenses.length === 0) {
+  const periodLabel = insightsPeriod === 'all' ? 'All Time'
+    : insightsPeriod === 'thisMonth' ? 'This Month'
+    : insightsPeriod === 'lastMonth' ? 'Last Month'
+    : new Date(insightsPeriod + '-01T12:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const periodSelector = buildInsightsPeriodSelector();
+
+  if (filteredExpenses.length === 0) {
     document.getElementById('insights-content').innerHTML = `
-      <div class="empty-state" style="padding:60px 20px;">
+      ${periodSelector}
+      <div class="empty-state" style="padding:40px 20px;">
         <div style="font-size:64px;margin-bottom:16px;">📊</div>
-        <div class="empty-title">No insights yet</div>
+        <div class="empty-title">No data for ${periodLabel}</div>
         <div class="empty-sub" style="margin-bottom:24px;max-width:260px;margin-left:auto;margin-right:auto;line-height:1.6;">
-          Add your first expense and Spendie will show you spending breakdowns, trends, and savings tips.
+          ${insightsPeriod === 'all' ? 'Add your first expense and Spendie will show you spending breakdowns.' : 'No expenses recorded for this period. Try a different month.'}
         </div>
-        <button onclick="openAddSheet()" style="padding:14px 28px;background:var(--gradient);border:none;border-radius:var(--r-btn);font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:var(--shadow-fab);">
-          ＋ Add First Expense
-        </button>
+        ${insightsPeriod === 'all' ? `<button onclick="openAddSheet()" style="padding:14px 28px;background:var(--gradient);border:none;border-radius:var(--r-btn);font-family:Poppins,sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:var(--shadow-fab);">＋ Add First Expense</button>` : ''}
       </div>`;
     return;
   }
 
   // Group by category
   const bycat = {};
-  data.expenses.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
+  filteredExpenses.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
   const sorted = Object.entries(bycat).sort((a, b) => b[1] - a[1]);
   const maxAmt = sorted[0]?.[1] || 1;
 
   // Pie chart
   const colors = sorted.map(([id]) => catInfo('expense', id).color);
-  let pieHTML = buildPie(sorted, totalExpense, colors);
+  const pieHTML = buildPie(sorted, totalExpense, colors);
 
-  let html = `
+  let html = `${periodSelector}
     <div class="card">
-      <div class="section-title">Spending by Category</div>
+      <div class="section-title">Spending by Category
+        <span style="font-size:11px;font-weight:500;color:var(--text3);">${periodLabel}</span>
+      </div>
       <div style="display:flex;align-items:center;gap:20px;">
         <div style="flex-shrink:0;">${pieHTML}</div>
         <div class="pie-legend" style="flex:1;min-width:0;">`;
@@ -3083,7 +3233,6 @@ function renderInsights() {
 
     <div class="card">
       <div class="section-title">Top Expenses</div>`;
-  const currentMonth = today().slice(0, 7);
   sorted.forEach(([id, amt]) => {
     const cat = catInfo('expense', id);
     const pct = (amt / maxAmt) * 100;
@@ -3104,11 +3253,13 @@ function renderInsights() {
   html += `</div>
 
     <div class="card">
-      <div class="section-title">Summary</div>
+      <div class="section-title">Summary
+        <span style="font-size:11px;font-weight:500;color:var(--text3);">${periodLabel}</span>
+      </div>
       <div class="summary-grid">
         <div class="summary-item"><div class="s-label">Income</div><div class="s-val" style="color:var(--green)">${fmt(totalIncome)}</div></div>
         <div class="summary-item"><div class="s-label">Expenses</div><div class="s-val" style="color:var(--red)">${fmt(totalExpense)}</div></div>
-        <div class="summary-item"><div class="s-label">Net Savings</div><div class="s-val">${fmt(net)}</div></div>
+        <div class="summary-item"><div class="s-label">Net Savings</div><div class="s-val" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(net)}</div></div>
         <div class="summary-item"><div class="s-label">Savings Rate</div><div class="s-val">${rate}%</div></div>
       </div>
     </div>`;
@@ -3274,7 +3425,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.3</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.4</p>`;
 }
 
 /* ── SETTINGS SHEET ENGINE ───────────────────────────────────── */
@@ -3581,6 +3732,7 @@ function clearAllData() {
   hoursData = [];
   recurringData = [];
   pendingRecurring = [];
+  pendingRecurringSkipped.clear();
   jobsData = [];
   saveData();
   saveBudgets();
