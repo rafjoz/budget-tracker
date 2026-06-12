@@ -1872,6 +1872,7 @@ body.dark .quick-add-menu {
     <button class="export-btn" onclick="exportCSV()"><span class="e-icon">📄</span>CSV</button>
     <button class="export-btn" onclick="exportJSON()"><span class="e-icon">💾</span>JSON Backup</button>
     <button class="export-btn" onclick="exportGSheets()"><span class="e-icon">📋</span>CSV for Sheets</button>
+    <button class="export-btn" onclick="exportRecurringCSV()" style="grid-column:span 2;"><span class="e-icon">🔄</span>Recurring Rules (CSV)</button>
   </div>
   <p style="font-size:12px;color:var(--text3);margin-top:16px;text-align:center;">Files named: spendie-report-YYYY-MM-DD<br/>💡 CSV for Sheets downloads a CSV then opens sheets.new — import it manually.</p>
   <div style="margin-top:16px;">
@@ -2310,7 +2311,9 @@ function checkBudgetAlerts(category) {
 }
 
 /* ── SMART INSIGHTS ──────────────────────────────────────────── */
-function getInsights(totalIncome, totalExpense) {
+function getInsights(totalIncome, totalExpense, expensesArr, incomeArr) {
+  const expenses = expensesArr || data.expenses;
+  const income   = incomeArr   || data.income;
   const insights = [];
   const net = totalIncome - totalExpense;
   const savingsRate = totalIncome > 0 ? (net / totalIncome) * 100 : 0;
@@ -2335,9 +2338,9 @@ function getInsights(totalIncome, totalExpense) {
     insights.push({ icon: '🔴', text: `You've used <strong>${spendRate.toFixed(0)}%</strong> of your income. Spending is getting high.` });
 
   // Top spending category
-  if (data.expenses.length > 0) {
+  if (expenses.length > 0) {
     const bycat = {};
-    data.expenses.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
+    expenses.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
     const top = Object.entries(bycat).sort((a, b) => b[1] - a[1])[0];
     if (top) {
       const cat = catInfo('expense', top[0]);
@@ -2347,8 +2350,8 @@ function getInsights(totalIncome, totalExpense) {
   }
 
   // Average daily spend
-  if (data.expenses.length >= 3) {
-    const dates = [...new Set(data.expenses.map(t => t.date))].length;
+  if (expenses.length >= 3) {
+    const dates = [...new Set(expenses.map(t => t.date))].length;
     const avgDaily = totalExpense / Math.max(dates, 1);
     insights.push({ icon: '📅', text: `You spend an average of <strong>${fmt(avgDaily)}</strong> per day.` });
   }
@@ -2359,6 +2362,32 @@ function getInsights(totalIncome, totalExpense) {
 
   // Return max 2 most relevant insights
   return insights.slice(0, 2);
+}
+
+// Returns a period-vs-previous-period comparison insight, or null
+function getPeriodComparisonInsight(range, currentExpenseTotal) {
+  if (!range) return null; // All Time has no "previous period"
+  const rangeStart = new Date(range.start + 'T12:00:00');
+  const rangeEnd   = new Date(range.end   + 'T12:00:00');
+  const spanDays   = Math.round((rangeEnd - rangeStart) / 86400000) + 1;
+  const prevEnd = new Date(rangeStart);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevStart.getDate() - (spanDays - 1));
+  const prevStartStr = dateToStr(prevStart);
+  const prevEndStr   = dateToStr(prevEnd);
+
+  const prevTotal = data.expenses
+    .filter(t => inRange(t.date, prevStartStr, prevEndStr))
+    .reduce((s, t) => s + t.amount, 0);
+
+  if (prevTotal <= 0) return null;
+
+  const diff = currentExpenseTotal - prevTotal;
+  const pct = Math.abs((diff / prevTotal) * 100);
+  if (pct < 1) return { icon: '➖', text: `Your spending is about the same as the previous period (<strong>${fmt(currentExpenseTotal)}</strong>).` };
+  if (diff > 0) return { icon: '📈', text: `You spent <strong>${pct.toFixed(0)}% more</strong> than the previous period (${fmt(prevTotal)} → ${fmt(currentExpenseTotal)}).` };
+  return { icon: '📉', text: `You spent <strong>${pct.toFixed(0)}% less</strong> than the previous period (${fmt(prevTotal)} → ${fmt(currentExpenseTotal)}).` };
 }
 
 /* ── HOME ────────────────────────────────────────────────────── */
@@ -2413,30 +2442,31 @@ function renderHome() {
       </div>`;
   }
 
+  const svgIcon = (path, color) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   const shortcutRow = `
     <div class="shortcut-row">
       <button class="shortcut-btn" onclick="openAddSheet()">
-        <div class="shortcut-btn-icon" style="background:rgba(255,107,107,.12);">💸</div>
+        <div class="shortcut-btn-icon" style="background:rgba(255,107,107,.12);">${svgIcon('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>', '#FF6B6B')}</div>
         <div class="shortcut-btn-label">Add Expense</div>
       </button>
       <button class="shortcut-btn" onclick="setType('income');openAddSheet();">
-        <div class="shortcut-btn-icon" style="background:rgba(52,211,153,.12);">💵</div>
+        <div class="shortcut-btn-icon" style="background:rgba(52,211,153,.12);">${svgIcon('<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>', '#34D399')}</div>
         <div class="shortcut-btn-label">Add Income</div>
       </button>
-      <button class="shortcut-btn" onclick="openHoursSheet()">
-        <div class="shortcut-btn-icon" style="background:rgba(49,198,227,.12);">⏱️</div>
+      <button class="shortcut-btn" onclick="${clockInTime ? "switchPage('hours', document.querySelector('[data-page=hours]'))" : 'clockInFromHome()'}">
+        <div class="shortcut-btn-icon" style="background:rgba(49,198,227,.12);">${svgIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', '#31C6E3')}</div>
         <div class="shortcut-btn-label">${clockInTime ? 'Clock Out' : 'Clock In'}</div>
       </button>
       <button class="shortcut-btn" onclick="openRecurringSheet()">
-        <div class="shortcut-btn-icon" style="background:rgba(167,139,250,.12);">🔄</div>
+        <div class="shortcut-btn-icon" style="background:rgba(167,139,250,.12);">${svgIcon('<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>', '#A78BFA')}</div>
         <div class="shortcut-btn-label">Recurring</div>
       </button>
       <button class="shortcut-btn" onclick="switchPage('insights', document.querySelector('[data-page=insights]'))">
-        <div class="shortcut-btn-icon" style="background:rgba(126,224,129,.12);">📊</div>
+        <div class="shortcut-btn-icon" style="background:rgba(126,224,129,.12);">${svgIcon('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', '#7EE081')}</div>
         <div class="shortcut-btn-label">Insights</div>
       </button>
       <button class="shortcut-btn" onclick="openExportSheet()">
-        <div class="shortcut-btn-icon" style="background:rgba(250,204,21,.12);">📤</div>
+        <div class="shortcut-btn-icon" style="background:rgba(250,204,21,.12);">${svgIcon('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>', '#FACC15')}</div>
         <div class="shortcut-btn-label">Export</div>
       </button>
     </div>`;
@@ -2511,8 +2541,8 @@ function renderHome() {
     <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value expense">${fmtPrivate(totalExpense)}</div></div>
   </div>`;
 
-  // Smart insights
-  const insights = getInsights(totalIncome, totalExpense);
+  // Smart insights (Home always shows all-time)
+  const insights = getInsights(totalIncome, totalExpense, data.expenses, data.income);
   if (insights.length > 0) {
     insights.forEach(ins => {
       html += `<div class="insight-card">
@@ -2555,8 +2585,14 @@ function renderHome() {
   if (recent.length === 0) {
     html += `<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Tap + to add your first one</div></div>`;
   } else {
+    let lastDateLabel = null;
     recent.forEach(t => {
       const cat = catInfo(t.type, t.category);
+      const label = dayDateStr(t.date);
+      if (label !== lastDateLabel) {
+        html += `<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin:${lastDateLabel === null ? '0' : '14px'} 0 6px;padding:0 2px;">${label}</div>`;
+        lastDateLabel = label;
+      }
       html += txRow(t, cat);
     });
   }
@@ -3264,6 +3300,24 @@ function renderInsights() {
       </div>
     </div>`;
 
+  // Period-aware smart insights (filtered to selected period)
+  const periodInsights = getInsights(totalIncome, totalExpense, filteredExpenses, filteredIncome);
+  periodInsights.forEach(ins => {
+    html += `<div class="insight-card">
+      <div class="insight-icon">${ins.icon}</div>
+      <div class="insight-text">${ins.text}</div>
+    </div>`;
+  });
+
+  // Period-over-period comparison (hidden on All Time)
+  const cmp = getPeriodComparisonInsight(range, totalExpense);
+  if (cmp) {
+    html += `<div class="insight-card">
+      <div class="insight-icon">${cmp.icon}</div>
+      <div class="insight-text">${cmp.text}</div>
+    </div>`;
+  }
+
   document.getElementById('insights-content').innerHTML = html;
 }
 
@@ -3425,7 +3479,7 @@ function renderSettings() {
       </div>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.4</p>`;
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px;">Spendie v3.5</p>`;
 }
 
 /* ── SETTINGS SHEET ENGINE ───────────────────────────────────── */
@@ -4002,6 +4056,16 @@ function handleClockIn() {
   startCardRefresh();
 }
 
+// One-tap clock in directly from the Home card (no sheet needed)
+function clockInFromHome() {
+  clockInTime = Date.now();
+  localStorage.setItem('spendie-clockin', clockInTime.toString());
+  localStorage.setItem('spendie-clockin-date', today());
+  renderHoursCard();
+  startCardRefresh();
+  showSaveToast(`▶ Clocked in at ${fmtTime(clockInTime)}`);
+}
+
 // Clock Out
 function handleClockOut() {
   if (!clockInTime) return;
@@ -4370,7 +4434,7 @@ function renderHoursCard() {
       </div>
       <button class="clock-btn ${clockInTime ? 'clock-out' : 'clock-in'}"
         style="margin-bottom:0;margin-top:4px;"
-        onclick="openHoursSheet()">
+        onclick="${clockInTime ? 'openHoursSheet()' : 'clockInFromHome()'}">
         ${clockInTime ? '⏹ Clock Out' : '▶ Clock In'}
       </button>
     </div>`;
@@ -4430,6 +4494,25 @@ function exportJSON() {
 function exportGSheets() {
   exportCSV();
   setTimeout(() => window.open('https://sheets.new', '_blank'), 500);
+}
+
+function exportRecurringCSV() {
+  if (recurringData.length === 0) { showSaveToast('⚠️ No recurring rules to export'); return; }
+  const rows = [['Description','Type','Amount','Category','Frequency','Day','Start Date','Active','Last Added']];
+  recurringData.forEach(r => {
+    const cat = catInfo(r.type, r.category);
+    let dayCol = '';
+    if (r.frequency === 'monthly') dayCol = `Day ${r.dayOfMonth}`;
+    else if (r.frequency === 'weekly' || r.frequency === 'biweekly') dayCol = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][r.dayOfWeek] || '';
+    rows.push([
+      r.label, r.type, r.amount, cat.label, r.frequency, dayCol, r.startDate,
+      r.active !== false ? 'Yes' : 'No', r.lastAdded || 'Never'
+    ]);
+  });
+  const csv = rows.map(row => row.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `spendie-recurring-${today()}.csv`; a.click();
 }
 
 function importJSON(e) {
